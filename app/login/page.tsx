@@ -61,7 +61,25 @@ export default function LoginPage() {
 
         <button
   type="button"
-  onClick={() => alert("The website updated correctly")}
+  onClick={async () => {
+    alert("Button clicked");
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    console.log("DATA:", data);
+    console.log("ERROR:", error);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("Login success!");
+    router.push("/admin");
+  }}
   className="w-full rounded-lg bg-red-600 p-4 font-bold text-white hover:bg-red-700"
 >
           Login
