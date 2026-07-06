@@ -1,10 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 const categories = [
@@ -26,17 +25,9 @@ type Product = {
 };
 
 export default function ShopPage() {
-  const searchParams = useSearchParams();
-
-  const categoryFromUrl = searchParams.get("category") || "All";
-
-  const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl);
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
-
-  useEffect(() => {
-    setSelectedCategory(categoryFromUrl);
-  }, [categoryFromUrl]);
 
   useEffect(() => {
     async function fetchProducts() {
@@ -50,7 +41,7 @@ export default function ShopPage() {
         return;
       }
 
-      setProducts(data || []);
+      setProducts((data as Product[]) || []);
     }
 
     fetchProducts();
@@ -83,7 +74,6 @@ export default function ShopPage() {
             Discover our latest collection.
           </p>
 
-          {/* Search */}
           <div className="mx-auto mt-10 max-w-xl">
             <input
               type="text"
@@ -94,7 +84,6 @@ export default function ShopPage() {
             />
           </div>
 
-          {/* Categories */}
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             {categories.map((category) => (
               <button
@@ -111,7 +100,6 @@ export default function ShopPage() {
             ))}
           </div>
 
-          {/* Products */}
           <div className="mt-16 grid gap-8 md:grid-cols-3">
             {filteredProducts.length > 0 ? (
               filteredProducts.map((product) => (
