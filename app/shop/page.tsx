@@ -43,15 +43,15 @@ export default function ShopPage() {
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("id", { ascending: false });
 
       if (error) {
         console.error(error);
         return;
       }
 
-      console.log(data);
-setProducts(data || []);
+      setProducts(data || []);
+    }
 
     fetchProducts();
   }, []);
