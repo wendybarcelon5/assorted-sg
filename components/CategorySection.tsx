@@ -26,7 +26,7 @@ export default function CategorySection() {
   async function loadCategories() {
     const { data, error } = await supabase
       .from("products")
-      .select("category,image")
+      .select("id, category, image")
       .order("id", { ascending: false });
 
     if (error) {
@@ -34,20 +34,19 @@ export default function CategorySection() {
       return;
     }
 
-    const categoryMap = new Map<string, string>();
+    const seen = new Set<string>();
+    const result: Category[] = [];
 
-    data?.forEach((product: Product) => {
-      if (!categoryMap.has(product.category)) {
-        categoryMap.set(product.category, product.image);
+    (data || []).forEach((product: Product) => {
+      if (!seen.has(product.category)) {
+        seen.add(product.category);
+
+        result.push({
+          title: product.category,
+          image: product.image,
+        });
       }
     });
-
-    const result: Category[] = Array.from(categoryMap).map(
-      ([title, image]) => ({
-        title,
-        image,
-      })
-    );
 
     setCategories(result);
   }
@@ -78,19 +77,21 @@ export default function CategorySection() {
               <img
                 src={category.image}
                 alt={category.title}
-                className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
+                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
 
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
 
               <div className="absolute bottom-8 left-8">
-                <h3 className="text-4xl font-black uppercase">
+
+                <h3 className="text-4xl font-black uppercase text-white">
                   {category.title}
                 </h3>
 
-                <span className="mt-4 inline-block rounded-full border border-red-600 px-5 py-2 text-sm font-bold uppercase tracking-wider transition group-hover:bg-red-600">
+                <span className="mt-5 inline-block rounded-full border border-red-600 px-5 py-3 font-bold uppercase tracking-wider transition group-hover:bg-red-600">
                   View Collection →
                 </span>
+
               </div>
             </Link>
           ))}
