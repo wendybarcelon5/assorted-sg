@@ -1,13 +1,45 @@
+"use client";
+
 import Link from "next/link";
-import { products } from "@/data/products";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import ProductCard from "./ProductCard";
 
+type Product = {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  image: string;
+  stock: number;
+};
+
 export default function FeaturedCollection() {
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    async function loadProducts() {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .limit(3);
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setProducts(data || []);
+    }
+
+    loadProducts();
+  }, []);
+
   return (
     <section className="bg-[#080808] py-28">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
 
-        {/* Heading */}
         <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
 
           <div>
@@ -34,9 +66,8 @@ export default function FeaturedCollection() {
 
         </div>
 
-        {/* Products */}
         <div className="mt-16 grid gap-8 md:grid-cols-3">
-          {products.slice(0, 3).map((product) => (
+          {products.map((product) => (
             <ProductCard
               key={product.id}
               product={product}
