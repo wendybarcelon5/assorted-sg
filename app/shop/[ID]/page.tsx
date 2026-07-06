@@ -24,9 +24,7 @@ export default function ProductPage() {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-
   const [quantity, setQuantity] = useState(1);
-
   const [selectedSize, setSelectedSize] = useState("M");
 
   useEffect(() => {
@@ -42,6 +40,7 @@ export default function ProductPage() {
 
     if (error) {
       console.error(error);
+      setLoading(false);
       return;
     }
 
@@ -53,7 +52,7 @@ export default function ProductPage() {
     return (
       <>
         <Navbar />
-        <main className="min-h-screen bg-black pt-32 text-white text-center">
+        <main className="min-h-screen bg-black pt-32 text-center text-white">
           Loading...
         </main>
         <Footer />
@@ -65,7 +64,7 @@ export default function ProductPage() {
     return (
       <>
         <Navbar />
-        <main className="min-h-screen bg-black pt-32 text-white text-center">
+        <main className="min-h-screen bg-black pt-32 text-center text-white">
           Product not found.
         </main>
         <Footer />
@@ -73,13 +72,16 @@ export default function ProductPage() {
     );
   }
 
+  // Product is guaranteed to exist after the check above
+  const currentProduct = product;
+
   function addProduct() {
     for (let i = 0; i < quantity; i++) {
       addToCart({
-        id: product.id,
-        name: `${product.name} (${selectedSize})`,
-        price: product.price,
-        image: product.image,
+        id: currentProduct.id,
+        name: `${currentProduct.name} (${selectedSize})`,
+        price: currentProduct.price,
+        image: currentProduct.image,
       });
     }
   }
@@ -91,32 +93,35 @@ export default function ProductPage() {
       <main className="min-h-screen bg-black pt-32 text-white">
         <div className="mx-auto grid max-w-7xl gap-12 px-8 md:grid-cols-2">
 
+          {/* Product Image */}
           <div>
             <img
-              src={product.image || "/placeholder.jpg"}
-              alt={product.name}
+              src={currentProduct.image || "/placeholder.jpg"}
+              alt={currentProduct.name}
               className="w-full rounded-2xl"
             />
           </div>
 
+          {/* Product Details */}
           <div>
 
             <span className="rounded-full bg-red-600 px-4 py-2 text-sm font-bold uppercase">
-              {product.category}
+              {currentProduct.category}
             </span>
 
             <h1 className="mt-6 text-5xl font-black">
-              {product.name}
+              {currentProduct.name}
             </h1>
 
             <p className="mt-6 text-4xl font-black text-red-500">
-              ₱{Number(product.price).toLocaleString()}
+              ₱{Number(currentProduct.price).toLocaleString()}
             </p>
 
             <p className="mt-8 text-lg leading-8 text-gray-300">
-              {product.description}
+              {currentProduct.description}
             </p>
 
+            {/* Size */}
             <h2 className="mt-8 text-xl font-bold">
               Size
             </h2>
@@ -126,7 +131,7 @@ export default function ProductPage() {
                 <button
                   key={size}
                   onClick={() => setSelectedSize(size)}
-                  className={`rounded-lg px-6 py-3 border ${
+                  className={`rounded-lg border px-6 py-3 ${
                     selectedSize === size
                       ? "border-red-600 bg-red-600"
                       : "border-gray-700"
@@ -137,12 +142,12 @@ export default function ProductPage() {
               ))}
             </div>
 
+            {/* Quantity */}
             <h2 className="mt-8 text-xl font-bold">
               Quantity
             </h2>
 
             <div className="mt-4 flex items-center gap-4">
-
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 className="rounded-lg border border-gray-700 px-5 py-2"
@@ -160,9 +165,9 @@ export default function ProductPage() {
               >
                 +
               </button>
-
             </div>
 
+            {/* Buttons */}
             <div className="mt-10 grid grid-cols-2 gap-4">
 
               <button
@@ -170,7 +175,7 @@ export default function ProductPage() {
                   addProduct();
                   alert("Added to cart!");
                 }}
-                className="rounded-xl border border-red-600 py-4 font-bold hover:bg-red-600"
+                className="rounded-xl border border-red-600 py-4 font-bold transition hover:bg-red-600"
               >
                 🛒 Add to Cart
               </button>
@@ -180,15 +185,15 @@ export default function ProductPage() {
                   addProduct();
                   router.push("/checkout");
                 }}
-                className="rounded-xl bg-red-600 py-4 font-bold hover:bg-red-700"
+                className="rounded-xl bg-red-600 py-4 font-bold text-white transition hover:bg-red-700"
               >
                 ⚡ Buy Now
               </button>
 
             </div>
 
-            <p className="mt-8 text-green-400 font-semibold">
-              Stock Available: {product.stock}
+            <p className="mt-8 font-semibold text-green-400">
+              Stock Available: {currentProduct.stock}
             </p>
 
           </div>
