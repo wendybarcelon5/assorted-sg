@@ -11,20 +11,27 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
 
   async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
+  e.preventDefault();
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  console.log("Login button clicked");
 
-    if (error) {
-      alert(error.message);
-      return;
-    }
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
-    router.push("/admin");
+  console.log("Response:", data);
+  console.log("Error:", error);
+
+  if (error) {
+    alert(error.message);
+    return;
   }
+
+  alert("Login successful!");
+
+  router.push("/admin");
+}
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-black">
@@ -53,9 +60,10 @@ export default function LoginPage() {
         />
 
         <button
-          type="submit"
-          className="w-full rounded-lg bg-red-600 p-4 font-bold text-white hover:bg-red-700"
-        >
+  type="button"
+  onClick={() => alert("The website updated correctly")}
+  className="w-full rounded-lg bg-red-600 p-4 font-bold text-white hover:bg-red-700"
+>
           Login
         </button>
       </form>
