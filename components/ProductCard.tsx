@@ -12,8 +12,6 @@ type Product = {
   image: string;
 };
 
-const image = product.image || "/placeholder.jpg";
-
 export default function ProductCard({
   product,
 }: {
@@ -21,6 +19,9 @@ export default function ProductCard({
 }) {
   const { addToCart } = useCart();
   const router = useRouter();
+
+  // ✅ Move it here
+  const image = product.image || "/placeholder.jpg";
 
   function addProductToCart() {
     addToCart({
