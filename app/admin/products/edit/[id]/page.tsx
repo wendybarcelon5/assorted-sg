@@ -1,64 +1,101 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-type Product = {
-  id: number;
-  name: string;
-  category: string;
-  price: number;
-  stock: number;
-  image: string;
-};
+export default function EditProductPage() {
+  const { id } = useParams();
+  const router = useRouter();
 
-export default function AdminProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("Jackets");
+  const [stock, setStock] = useState("");
+
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
   useEffect(() => {
-    loadProducts();
+    loadProduct();
   }, []);
 
-  async function loadProducts() {
+  async function loadProduct() {
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .order("id", { ascending: false });
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setProducts(data || []);
-    setLoading(false);
-  }
-
-  async function deleteProduct(id: number) {
-    const confirmDelete = confirm(
-      "Are you sure you want to delete this product?"
-    );
-
-    if (!confirmDelete) return;
-
-    const { error } = await supabase
-      .from("products")
-      .delete()
-      .eq("id", id);
+      .eq("id", Number(id))
+      .single();
 
     if (error) {
       alert(error.message);
       return;
     }
 
-    loadProducts();
+    setName(data.name);
+    setDescription(data.description);
+    setPrice(String(data.price));
+    setCategory(data.category);
+    setStock(String(data.stock));
+    setImageUrl(data.image);
+
+    setLoading(false);
+  }
+
+  async function updateProduct(e: React.FormEvent) {
+    e.preventDefault();
+
+    let finalImage = imageUrl;
+
+    if (imageFile) {
+      const fileName = `${Date.now()}-${imageFile.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("products")
+        .upload(fileName, imageFile);
+
+      if (uploadError) {
+        alert(uploadError.message);
+        return;
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage
+        .from("products")
+        .getPublicUrl(fileName);
+
+      finalImage = publicUrl;
+    }
+
+    const { error } = await supabase
+      .from("products")
+      .update({
+        name,
+        description,
+        price: Number(price),
+        category,
+        stock: Number(stock),
+        image: finalImage,
+      })
+      .eq("id", Number(id));
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("Product updated successfully!");
+
+    router.push("/admin/products");
   }
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-black p-10 text-white">
+      <main className="min-h-screen flex items-center justify-center bg-black text-white">
         Loading...
       </main>
     );
@@ -67,110 +104,99 @@ export default function AdminProductsPage() {
   return (
     <main className="min-h-screen bg-black p-10 text-white">
 
-      <div className="flex items-center justify-between">
+      <h1 className="text-5xl font-black">
+        Edit Product
+      </h1>
+
+      <p className="mt-2 text-gray-400">
+        Update your product information.
+      </p>
+
+      <form
+        onSubmit={updateProduct}
+        className="mt-10 max-w-3xl space-y-6"
+      >
+
+        <input
+          type="text"
+          placeholder="Product Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full rounded-lg border border-gray-700 bg-[#111] p-4"
+        />
+
+        <textarea
+          rows={5}
+          placeholder="Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="w-full rounded-lg border border-gray-700 bg-[#111] p-4"
+        />
+
+        <input
+          type="number"
+          placeholder="Price"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          className="w-full rounded-lg border border-gray-700 bg-[#111] p-4"
+        />
+
+        <input
+          type="number"
+          placeholder="Stock"
+          value={stock}
+          onChange={(e) => setStock(e.target.value)}
+          className="w-full rounded-lg border border-gray-700 bg-[#111] p-4"
+        />
+
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-full rounded-lg border border-gray-700 bg-[#111] p-4"
+        >
+          <option>Jackets</option>
+          <option>Shirts</option>
+          <option>Pants</option>
+          <option>Shorts</option>
+        </select>
 
         <div>
-          <h1 className="text-5xl font-black">
-            Products
-          </h1>
-
-          <p className="mt-2 text-gray-400">
-            Manage your store products
+          <p className="mb-3 font-semibold">
+            Current Image
           </p>
+
+          <img
+            src={imageUrl}
+            alt={name}
+            className="h-56 rounded-xl border border-gray-700 object-cover"
+          />
         </div>
 
-        <Link
-          href="/admin/new"
-          className="rounded-lg bg-red-600 px-6 py-3 font-bold hover:bg-red-700"
+        <div>
+          <label className="mb-2 block font-semibold">
+            Upload New Image (Optional)
+          </label>
+
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              if (e.target.files?.[0]) {
+                setImageFile(e.target.files[0]);
+              }
+            }}
+            className="w-full"
+          />
+        </div>
+
+        <button
+          type="submit"
+          className="rounded-lg bg-red-600 px-8 py-4 font-bold uppercase hover:bg-red-700"
         >
-          + Add Product
-        </Link>
+          Save Changes
+        </button>
 
-      </div>
-
-      <div className="mt-10 overflow-x-auto rounded-xl border border-gray-800">
-
-        <table className="w-full">
-
-          <thead className="bg-[#111]">
-
-            <tr className="text-left">
-
-              <th className="p-4">Image</th>
-              <th className="p-4">Product</th>
-              <th className="p-4">Category</th>
-              <th className="p-4">Price</th>
-              <th className="p-4">Stock</th>
-              <th className="p-4">Actions</th>
-
-            </tr>
-
-          </thead>
-
-          <tbody>
-
-            {products.map((product) => (
-
-              <tr
-                key={product.id}
-                className="border-t border-gray-800"
-              >
-
-                <td className="p-4">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="h-20 w-20 rounded-lg object-cover"
-                  />
-                </td>
-
-                <td className="p-4 font-semibold">
-                  {product.name}
-                </td>
-
-                <td className="p-4">
-                  {product.category}
-                </td>
-
-                <td className="p-4">
-                  ₱{Number(product.price).toLocaleString()}
-                </td>
-
-                <td className="p-4">
-                  {product.stock}
-                </td>
-
-                <td className="p-4">
-
-                  <div className="flex gap-3">
-
-                    <Link
-                      href={`/admin/edit/${product.id}`}
-                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold hover:bg-blue-700"
-                    >
-                      Edit
-                    </Link>
-
-                    <button
-                      onClick={() => deleteProduct(product.id)}
-                      className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold hover:bg-red-700"
-                    >
-                      Delete
-                    </button>
-
-                  </div>
-
-                </td>
-
-              </tr>
-
-            ))}
-
-          </tbody>
-
-        </table>
-
-      </div>
+      </form>
 
     </main>
   );
