@@ -78,7 +78,7 @@ export default function LoginPage() {
     }
 
     alert("Login success!");
-    router.push("/admin");
+    window.location.href = "/admin";
   }}
   className="w-full rounded-lg bg-red-600 p-4 font-bold text-white hover:bg-red-700"
 >
