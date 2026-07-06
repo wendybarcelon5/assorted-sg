@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/app/context/CartContext";
 
 type Product = {
@@ -8,8 +9,10 @@ type Product = {
   name: string;
   price: number;
   category: string;
-  images: (string | undefined)[];
+  image: string;
 };
+
+const image = product.image || "/placeholder.jpg";
 
 export default function ProductCard({
   product,
@@ -17,8 +20,16 @@ export default function ProductCard({
   product: Product;
 }) {
   const { addToCart } = useCart();
+  const router = useRouter();
 
-  const image = product.images?.[0] || "/placeholder.jpg";
+  function addProductToCart() {
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image,
+    });
+  }
 
   return (
     <div className="group overflow-hidden rounded-2xl border border-gray-800 bg-[#111] transition-all duration-300 hover:-translate-y-2 hover:border-red-600 hover:shadow-2xl hover:shadow-red-600/10">
@@ -47,21 +58,25 @@ export default function ProductCard({
         </div>
       </Link>
 
-      <div className="px-6 pb-6">
+      <div className="grid grid-cols-2 gap-3 px-6 pb-6">
         <button
           onClick={() => {
-            addToCart({
-              id: product.id,
-              name: product.name,
-              price: product.price,
-              image,
-            });
-
+            addProductToCart();
             alert(`${product.name} added to cart!`);
           }}
-          className="w-full rounded-xl border border-red-600 py-3 font-bold uppercase transition hover:bg-red-600"
+          className="rounded-xl border border-red-600 py-3 font-bold uppercase transition hover:bg-red-600"
         >
-          Add to Cart
+          🛒 Add to Cart
+        </button>
+
+        <button
+          onClick={() => {
+            addProductToCart();
+            router.push("/checkout");
+          }}
+          className="rounded-xl bg-red-600 py-3 font-bold uppercase text-white transition hover:bg-red-700"
+        >
+          ⚡ Buy Now
         </button>
       </div>
 
