@@ -59,25 +59,19 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button
+       <button
   type="button"
   onClick={async () => {
-    alert("Button clicked");
-
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-
-    console.log("DATA:", data);
-    console.log("ERROR:", error);
 
     if (error) {
       alert(error.message);
       return;
     }
 
-    alert("Login success!");
     window.location.href = "/admin";
   }}
   className="w-full rounded-lg bg-red-600 p-4 font-bold text-white hover:bg-red-700"
