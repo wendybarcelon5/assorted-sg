@@ -8,7 +8,7 @@ type Product = {
   name: string;
   price: number;
   category: string;
-  image: string;
+  images: (string | undefined)[];
 };
 
 export default function ProductCard({
@@ -18,22 +18,18 @@ export default function ProductCard({
 }) {
   const { addToCart } = useCart();
 
+  const image = product.images?.[0] || "/placeholder.jpg";
+
   return (
     <div className="group overflow-hidden rounded-2xl border border-gray-800 bg-[#111] transition-all duration-300 hover:-translate-y-2 hover:border-red-600 hover:shadow-2xl hover:shadow-red-600/10">
 
       <Link href={`/shop/${product.id}`}>
         <div className="overflow-hidden">
-          {product.image ? (
-            <img
-              src={product.image}
-              alt={product.name}
-              className="h-80 w-full object-cover transition-transform duration-500 group-hover:scale-110"
-            />
-          ) : (
-            <div className="flex h-80 items-center justify-center bg-gray-800 text-gray-400">
-              No Image
-            </div>
-          )}
+          <img
+            src={image}
+            alt={product.name}
+            className="h-80 w-full object-cover transition-transform duration-500 group-hover:scale-110"
+          />
         </div>
 
         <div className="p-6">
@@ -54,13 +50,11 @@ export default function ProductCard({
       <div className="px-6 pb-6">
         <button
           onClick={() => {
-            console.log("Clicked");
-
             addToCart({
               id: product.id,
               name: product.name,
               price: product.price,
-              image: product.image,
+              image,
             });
 
             alert(`${product.name} added to cart!`);

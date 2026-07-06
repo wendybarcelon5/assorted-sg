@@ -26,7 +26,7 @@ export default async function ProductPage({
           {/* Product Image */}
           <div>
             <img
-              src={product.image}
+              src={product.images[0] || "/placeholder.jpg"}
               alt={product.name}
               className="w-full rounded-2xl"
             />
