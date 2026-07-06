@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 const categories = [
@@ -14,27 +15,46 @@ const categories = [
   "Shorts",
 ];
 
+type Product = {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  image: string;
+  stock: number;
+};
+
 export default function ShopPage() {
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const searchParams = useSearchParams();
+
+  const categoryFromUrl = searchParams.get("category") || "All";
+
+  const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl);
   const [search, setSearch] = useState("");
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-  async function fetchProducts() {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*");
+    setSelectedCategory(categoryFromUrl);
+  }, [categoryFromUrl]);
 
-    if (error) {
-      console.error(error);
-      return;
-    }
+  useEffect(() => {
+    async function fetchProducts() {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-    setProducts(data || []);
-  }
+      if (error) {
+        console.error(error);
+        return;
+      }
 
-  fetchProducts();
-}, []);
+      console.log(data);
+setProducts(data || []);
+
+    fetchProducts();
+  }, []);
 
   const filteredProducts = products.filter((product) => {
     const matchesCategory =
