@@ -1,32 +1,207 @@
+"use client";
+
+import Image from "next/image";
 import Link from "next/link";
+import { Mail, Phone, MapPin } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-gray-800 bg-black">
-      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-8 px-8 py-12 md:flex-row">
+    <footer className="border-t border-white/10 bg-[#070707]">
+      <div className="mx-auto max-w-7xl px-6 py-20">
+        <div className="grid gap-14 md:grid-cols-2 lg:grid-cols-4">
+          {/* Brand */}
+          <div>
+            <div className="flex items-center gap-3">
+              <Image
+                src="/logo.png"
+                alt="Assorted SG"
+                width={50}
+                height={50}
+              />
 
-        <div>
-          <h2 className="text-3xl font-black">
-            <span className="text-white">ASSORTED </span>
-            <span className="text-red-600">SG</span>
-          </h2>
+              <div>
+                <h2 className="text-2xl font-black uppercase">
+                  ASSORTED <span className="text-red-600">SG</span>
+                </h2>
 
-          <p className="mt-3 text-gray-400">
-            Premium Men's Clothing
-          </p>
+                <p className="text-xs uppercase tracking-[0.35em] text-[#D4AF37]">
+                  Premium Streetwear
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-6 leading-8 text-gray-400">
+              Premium men's fashion designed for everyday confidence.
+              Modern streetwear built with quality, style, and comfort.
+            </p>
+          </div>
+
+          {/* Quick Links */}
+          <div>
+            <h3 className="mb-6 text-xl font-bold text-white">
+              Quick Links
+            </h3>
+
+            <div className="space-y-4">
+              <Link
+                href="/"
+                className="block text-gray-400 transition hover:text-red-500"
+              >
+                Home
+              </Link>
+
+              <Link
+                href="/shop"
+                className="block text-gray-400 transition hover:text-red-500"
+              >
+                Shop
+              </Link>
+
+              <Link
+                href="/about"
+                className="block text-gray-400 transition hover:text-red-500"
+              >
+                About
+              </Link>
+
+              <Link
+                href="/contact"
+                className="block text-gray-400 transition hover:text-red-500"
+              >
+                Contact
+              </Link>
+            </div>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h3 className="mb-6 text-xl font-bold text-white">
+              Contact
+            </h3>
+
+            <div className="space-y-5 text-gray-400">
+              <div className="flex items-center gap-3">
+                <MapPin size={18} className="text-red-600" />
+                <span>Taguig, Philippines</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Phone size={18} className="text-red-600" />
+                <span>+63 969 312 0935</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Mail size={18} className="text-red-600" />
+                <span>assortedsg@gmail.com</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Social + Payment */}
+          <div>
+            <h3 className="mb-6 text-xl font-bold text-white">
+              Follow Us
+            </h3>
+
+            <div className="flex items-center gap-4">
+              <a
+                href="https://www.facebook.com/profile.php?id=61591374251267"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Image
+                  src="/social/facebook.png"
+                  alt="Facebook"
+                  width={34}
+                  height={34}
+                  className="transition duration-300 hover:scale-110"
+                />
+              </a>
+
+              <a
+                href="https://www.instagram.com/assorted_sg"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Image
+                  src="/social/instagram.png"
+                  alt="Instagram"
+                  width={34}
+                  height={34}
+                  className="transition duration-300 hover:scale-110"
+                />
+              </a>
+
+              <a
+                href="https://messenger.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Image
+                  src="/social/messenger.png"
+                  alt="Messenger"
+                  width={34}
+                  height={34}
+                  className="transition duration-300 hover:scale-110"
+                />
+              </a>
+            </div>
+
+            <h3 className="mt-10 mb-5 text-xl font-bold text-white">
+              Payment Methods
+            </h3>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Image
+                src="/payment/gcash.png"
+                alt="GCash"
+                width={60}
+                height={38}
+              />
+
+              <Image
+                src="/payment/maya.png"
+                alt="Maya"
+                width={60}
+                height={38}
+              />
+
+              <Image
+                src="/payment/visa.png"
+                alt="Visa"
+                width={60}
+                height={38}
+              />
+
+              <Image
+                src="/payment/mastercard.png"
+                alt="Mastercard"
+                width={60}
+                height={38}
+              />
+
+              <Image
+                src="/payment/cod.png"
+                alt="Cash on Delivery"
+                width={60}
+                height={38}
+              />
+            </div>
+          </div>
         </div>
-
-        <div className="flex gap-8 uppercase text-sm">
-          <Link href="/">Home</Link>
-          <Link href="/shop">Shop</Link>
-          <Link href="/about">About</Link>
-          <Link href="/contact">Contact</Link>
-        </div>
-
       </div>
 
-      <div className="border-t border-gray-800 py-6 text-center text-gray-500">
-        © {new Date().getFullYear()} Assorted SG. All Rights Reserved.
+      <div className="border-t border-white/10">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-6 text-sm text-gray-500 md:flex-row">
+          <p>
+            © 2026 <span className="font-semibold text-white">Assorted SG</span>.
+            All Rights Reserved.
+          </p>
+
+          <p>
+            Designed with ❤️ in the Philippines.
+          </p>
+        </div>
       </div>
     </footer>
   );

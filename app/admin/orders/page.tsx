@@ -1,156 +1,367 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
+import {
+  Search,
+  Eye,
+  RefreshCw,
+} from "lucide-react";
 
 type Order = {
   id: number;
   customer_name: string;
   email: string;
-  phone: string;
+  payment_method: string;
   total: number;
   status: string;
   created_at: string;
-  payment_method: string;
-  receipt_url: string | null;
+};
+
+const statusColors: Record<string, string> = {
+  Pending: "bg-yellow-500/20 text-yellow-400",
+  "Awaiting Payment Verification":
+    "bg-orange-500/20 text-orange-400",
+  Preparing: "bg-blue-500/20 text-blue-400",
+  Shipped: "bg-indigo-500/20 text-indigo-400",
+  "Out for Delivery":
+    "bg-cyan-500/20 text-cyan-400",
+  Delivered: "bg-green-500/20 text-green-400",
+  Cancelled: "bg-red-500/20 text-red-400",
 };
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [search, setSearch] = useState("");
+
+  const [statusFilter, setStatusFilter] =
+    useState("All");
 
   useEffect(() => {
-    fetchOrders();
+    loadOrders();
   }, []);
 
-  async function fetchOrders() {
-    const { data, error } = await supabase
+  async function loadOrders() {
+    setLoading(true);
+
+    const { data } = await supabase
       .from("orders")
       .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
+      .order("created_at", {
+        ascending: false,
+      });
 
     setOrders(data || []);
+
+    setLoading(false);
   }
 
-  async function updateStatus(id: number, status: string) {
-    const { error } = await supabase
+  async function updateStatus(
+    id: number,
+    status: string
+  ) {
+    await supabase
       .from("orders")
-      .update({ status })
+      .update({
+        status,
+      })
       .eq("id", id);
 
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    setOrders((prev) =>
-      prev.map((order) =>
-        order.id === id ? { ...order, status } : order
-      )
-    );
+    loadOrders();
   }
 
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const matchesSearch =
+        order.customer_name
+          .toLowerCase()
+          .includes(search.toLowerCase()) ||
+        order.email
+          .toLowerCase()
+          .includes(search.toLowerCase()) ||
+        String(order.id).includes(search);
+
+      const matchesStatus =
+        statusFilter === "All"
+          ? true
+          : order.status === statusFilter;
+
+      return (
+        matchesSearch &&
+        matchesStatus
+      );
+    });
+  }, [
+    orders,
+    search,
+    statusFilter,
+  ]);
+
   return (
-    <>
-      <h1 className="text-5xl font-black">Orders</h1>
+    <main className="admin-page space-y-8">
 
-      <div className="mt-10 overflow-hidden rounded-xl border border-gray-800 bg-[#111]">
-        <table className="w-full">
-          <thead className="bg-black">
-            <tr>
-              <th className="p-4 text-left">Order #</th>
-              <th className="p-4 text-left">Customer</th>
-              <th className="p-4 text-left">Email</th>
-              <th className="p-4 text-left">Phone</th>
-              <th className="p-4 text-left">Total</th>
-              <th className="p-4 text-left">Payment</th>
-              <th className="p-4 text-left">Status</th>
-              <th className="p-4 text-left">Date</th>
-            </tr>
-          </thead>
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
-          <tbody>
-            {orders.map((order) => (
-              <tr
-                key={order.id}
-                className="border-t border-gray-800 hover:bg-gray-900"
-              >
-                <td className="p-4 font-bold">
-                  <Link
-                    href={`/admin/orders/${order.id}`}
-                    className="text-red-500 hover:underline"
-                  >
-                    #{order.id}
-                  </Link>
-                </td>
+        <div>
 
-                <td className="p-4">{order.customer_name}</td>
+          <h1 className="text-4xl font-black text-white">
+            Orders
+          </h1>
 
-                <td className="p-4">{order.email}</td>
+          <p className="mt-2 text-gray-400">
+            Manage all customer orders.
+          </p>
 
-                <td className="p-4">{order.phone}</td>
+        </div>
 
-                <td className="p-4">
-                  ₱{Number(order.total).toLocaleString()}
-                </td>
+        <button
+          onClick={loadOrders}
+          className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-6 py-3 font-bold text-white transition hover:bg-red-700"
+        >
+          <RefreshCw size={18} />
 
-                <td className="p-4">
-                  <div className="space-y-1">
-                    <p>{order.payment_method}</p>
+          Refresh
+        </button>
 
-                    {order.receipt_url && (
-                      <a
-                        href={order.receipt_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:underline"
-                      >
-                        View Receipt
-                      </a>
-                    )}
-                  </div>
-                </td>
-
-                <td className="p-4">
-                  <select
-                    value={order.status}
-                    onChange={(e) =>
-                      updateStatus(order.id, e.target.value)
-                    }
-                    className="rounded border border-gray-700 bg-[#111] px-3 py-2"
-                  >
-                    <option>Pending</option>
-                    <option>Processing</option>
-                    <option>Shipped</option>
-                    <option>Delivered</option>
-                    <option>Cancelled</option>
-                  </select>
-                </td>
-
-                <td className="p-4">
-                  {new Date(order.created_at).toLocaleDateString()}
-                </td>
-              </tr>
-            ))}
-
-            {orders.length === 0 && (
-              <tr>
-                <td
-                  colSpan={8}
-                  className="p-6 text-center text-gray-400"
-                >
-                  No orders found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
       </div>
-    </>
+
+      <div className="grid gap-5 lg:grid-cols-[1fr_220px]">
+
+        <div className="flex items-center rounded-2xl bg-[#1E293B] px-4">
+
+          <Search
+            size={20}
+            className="text-gray-400"
+          />
+
+          <input
+            value={search}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
+            placeholder="Search customer, email or order ID..."
+            className="h-14 w-full bg-transparent pl-3 text-white outline-none placeholder:text-gray-500"
+          />
+
+        </div>
+
+        <select
+          value={statusFilter}
+          onChange={(e) =>
+            setStatusFilter(
+              e.target.value
+            )
+          }
+          className="h-14 rounded-2xl bg-[#1E293B] px-5 text-white outline-none"
+        >
+          <option>All</option>
+          <option>Pending</option>
+          <option>
+            Awaiting Payment Verification
+          </option>
+          <option>Preparing</option>
+          <option>Shipped</option>
+          <option>
+            Out for Delivery
+          </option>
+          <option>Delivered</option>
+          <option>Cancelled</option>
+        </select>
+
+      </div>
+
+      <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#1E293B]">
+
+        <div className="overflow-x-auto">
+
+          <table className="min-w-full">
+
+            <thead className="bg-[#111827]">
+
+              <tr>
+
+                <th className="px-6 py-5 text-left text-sm font-bold text-gray-300">
+                  Order
+                </th>
+
+                <th className="px-6 py-5 text-left text-sm font-bold text-gray-300">
+                  Customer
+                </th>
+
+                <th className="px-6 py-5 text-left text-sm font-bold text-gray-300">
+                  Payment
+                </th>
+
+                <th className="px-6 py-5 text-left text-sm font-bold text-gray-300">
+                  Total
+                </th>
+
+                <th className="px-6 py-5 text-left text-sm font-bold text-gray-300">
+                  Status
+                </th>
+
+                <th className="px-6 py-5 text-left text-sm font-bold text-gray-300">
+                  Action
+                </th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+                            {loading ? (
+
+                <tr>
+
+                  <td
+                    colSpan={6}
+                    className="py-14 text-center text-gray-400"
+                  >
+                    Loading orders...
+                  </td>
+
+                </tr>
+
+              ) : filteredOrders.length === 0 ? (
+
+                <tr>
+
+                  <td
+                    colSpan={6}
+                    className="py-14 text-center text-gray-400"
+                  >
+                    No orders found.
+                  </td>
+
+                </tr>
+
+              ) : (
+
+                filteredOrders.map((order) => (
+
+                  <tr
+                    key={order.id}
+                    className="border-t border-white/10 transition hover:bg-[#263247]"
+                  >
+
+                    <td className="px-6 py-5 font-bold text-red-500">
+                      #{order.id}
+                    </td>
+
+                    <td className="px-6 py-5">
+
+                      <p className="font-semibold text-white">
+                        {order.customer_name}
+                      </p>
+
+                      <p className="text-sm text-gray-400">
+                        {order.email}
+                      </p>
+
+                    </td>
+
+                    <td className="px-6 py-5 text-white">
+                      {order.payment_method}
+                    </td>
+
+                    <td className="px-6 py-5 font-black text-[#D4AF37]">
+                      ₱
+                      {Number(
+                        order.total
+                      ).toLocaleString()}
+                    </td>
+
+                    <td className="px-6 py-5">
+
+                      <span
+                        className={`rounded-full px-4 py-2 text-xs font-bold ${
+                          statusColors[
+                            order.status
+                          ] ||
+                          "bg-gray-700 text-white"
+                        }`}
+                      >
+                        {order.status}
+                      </span>
+
+                    </td>
+
+                    <td className="px-6 py-5">
+
+                      <div className="flex items-center gap-3">
+
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-700"
+                        >
+                          <Eye size={16} />
+
+                          View
+                        </Link>
+
+                        <select
+                          value={order.status}
+                          onChange={(e) =>
+                            updateStatus(
+                              order.id,
+                              e.target.value
+                            )
+                          }
+                          className="rounded-lg bg-[#111827] px-3 py-2 text-sm text-white outline-none"
+                        >
+                          <option>
+                            Pending
+                          </option>
+
+                          <option>
+                            Awaiting Payment Verification
+                          </option>
+
+                          <option>
+                            Preparing
+                          </option>
+
+                          <option>
+                            Shipped
+                          </option>
+
+                          <option>
+                            Out for Delivery
+                          </option>
+
+                          <option>
+                            Delivered
+                          </option>
+
+                          <option>
+                            Cancelled
+                          </option>
+
+                        </select>
+
+                      </div>
+
+                    </td>
+
+                  </tr>
+
+                ))
+
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+    </main>
+
   );
+
 }

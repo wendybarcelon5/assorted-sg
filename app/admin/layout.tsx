@@ -1,59 +1,37 @@
-import Link from "next/link";
+import type { ReactNode } from "react";
+import Sidebar from "@/components/admin/Sidebar";
+import Header from "@/components/admin/Header";
 
 export default function AdminLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <main className="min-h-screen bg-black text-white flex">
+    <div className="min-h-screen bg-[#0F172A]">
 
       {/* Sidebar */}
-      <aside className="w-72 border-r border-gray-800 bg-[#111] p-8">
 
-        <h1 className="text-3xl font-black text-red-600">
-          ASSORTED SG
-        </h1>
+      <Sidebar />
 
-        <p className="mt-2 text-sm text-gray-400">
-          Admin Panel
-        </p>
+      {/* Main Content */}
 
-        <nav className="mt-12 space-y-4">
+      <div className="lg:ml-72">
 
-          <Link href="/admin" className="block hover:text-red-500">
-            📊 Dashboard
-          </Link>
+        {/* Header */}
 
-          <Link href="/admin/products" className="block hover:text-red-500">
-            📦 Products
-          </Link>
+        <Header />
 
-          <Link href="/admin/orders" className="block hover:text-red-500">
-            📋 Orders
-          </Link>
+        {/* Page */}
 
-          <Link href="/admin/customers" className="block hover:text-red-500">
-            👥 Customers
-          </Link>
+        <main className="p-6 md:p-8">
 
-          <Link href="/admin/reports" className="block hover:text-red-500">
-            📈 Reports
-          </Link>
+          {children}
 
-          <Link href="/admin/settings" className="block hover:text-red-500">
-            ⚙ Settings
-          </Link>
+        </main>
 
-        </nav>
+      </div>
 
-      </aside>
-
-      {/* Page Content */}
-      <section className="flex-1 p-10">
-        {children}
-      </section>
-
-    </main>
+    </div>
   );
 }

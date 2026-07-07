@@ -24,3 +24,68 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+/* ===========================
+   ADMIN PANEL
+=========================== */
+
+.admin-page{
+    color:#fff;
+}
+
+.admin-page h1,
+.admin-page h2,
+.admin-page h3,
+.admin-page h4,
+.admin-page h5,
+.admin-page h6{
+    color:#ffffff;
+}
+
+.admin-page p{
+    color:#d1d5db;
+}
+
+.admin-page span{
+    color:inherit;
+}
+
+.admin-page label{
+    color:#ffffff;
+}
+
+.admin-page input,
+.admin-page textarea,
+.admin-page select{
+    color:#ffffff;
+    background:#111827;
+    border:1px solid rgb(55 65 81);
+}
+
+.admin-page input::placeholder,
+.admin-page textarea::placeholder{
+    color:#9ca3af;
+}
+
+.admin-page table{
+    color:#ffffff;
+}
+
+.admin-page th{
+    color:#f3f4f6;
+}
+
+.admin-page td{
+    color:#ffffff;
+}
+
+.admin-page svg{
+    color:#ffffff;
+}
+
+.admin-page button svg{
+    color:inherit;
+}
+
+.admin-page a{
+    color:inherit;
+}

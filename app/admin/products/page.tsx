@@ -52,100 +52,163 @@ export default function ProductsPage() {
   }, []);
 
   return (
-    <>
-      <div className="flex items-center justify-between">
-        <h1 className="text-5xl font-black">
+  <main className="admin-page space-y-8 text-white">
+
+    <div className="flex flex-col items-start justify-between gap-5 md:flex-row md:items-center">
+
+      <div>
+
+        <h1 className="text-5xl font-black text-white">
           Products
         </h1>
 
-        <Link
-          href="/admin/products/new"
-          className="rounded-lg bg-red-600 px-6 py-3 font-bold hover:bg-red-700"
-        >
-          + Add Product
-        </Link>
+        <p className="mt-2 text-gray-300">
+          Manage all your store products.
+        </p>
+
       </div>
 
-      <div className="mt-10 overflow-hidden rounded-xl border border-gray-800 bg-[#111]">
-        <table className="w-full">
-          <thead className="bg-black">
-            <tr>
-              <th className="p-4 text-left">Image</th>
-              <th className="p-4 text-left">Product</th>
-              <th className="p-4 text-left">Category</th>
-              <th className="p-4 text-left">Price</th>
-              <th className="p-4 text-left">Stock</th>
-              <th className="p-4 text-center">Actions</th>
-            </tr>
-          </thead>
+      <Link
+        href="/admin/products/new"
+        className="rounded-xl bg-red-600 px-6 py-3 font-bold text-white transition hover:bg-red-700"
+      >
+        + Add Product
+      </Link>
 
-          <tbody>
-            {products.map((product) => (
-              <tr
-                key={product.id}
-                className="border-t border-gray-800"
-              >
-                <td className="p-4">
-  {product.image ? (
-    <img
-      src={product.image}
-      alt={product.name}
-      className="h-20 w-20 rounded-lg object-cover"
-    />
-  ) : (
-    <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-gray-800 text-xs">
-      No Image
     </div>
-  )}
-</td>
 
-                <td className="p-4 font-semibold">
-                  {product.name}
-                </td>
+    <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#1E293B] shadow-xl">
 
-                <td className="p-4">
-                  {product.category}
-                </td>
+      <table className="w-full text-white">
 
-                <td className="p-4">
-                  ₱{product.price}
-                </td>
+        <thead className="bg-[#111827]">
 
-                <td className="p-4">
+          <tr>
+
+            <th className="p-5 text-left font-bold text-gray-200">
+              Image
+            </th>
+
+            <th className="p-5 text-left font-bold text-gray-200">
+              Product
+            </th>
+
+            <th className="p-5 text-left font-bold text-gray-200">
+              Category
+            </th>
+
+            <th className="p-5 text-left font-bold text-gray-200">
+              Price
+            </th>
+
+            <th className="p-5 text-left font-bold text-gray-200">
+              Stock
+            </th>
+
+            <th className="p-5 text-center font-bold text-gray-200">
+              Actions
+            </th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          {products.map((product) => (
+
+            <tr
+              key={product.id}
+              className="border-t border-white/10 transition hover:bg-[#263247]"
+            >
+
+              <td className="p-5">
+
+                {product.image ? (
+
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="h-20 w-20 rounded-xl border border-white/10 object-cover"
+                  />
+
+                ) : (
+
+                  <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-[#111827] text-sm text-gray-400">
+
+                    No Image
+
+                  </div>
+
+                )}
+
+              </td>
+
+              <td className="p-5 font-bold text-white">
+                {product.name}
+              </td>
+
+              <td className="p-5 text-gray-200">
+                {product.category}
+              </td>
+
+              <td className="p-5 font-bold text-[#D4AF37]">
+                ₱{Number(product.price).toLocaleString()}
+              </td>
+
+              <td className="p-5">
+
+                <span className="rounded-full bg-green-600/20 px-3 py-1 text-sm font-bold text-green-400">
+
                   {product.stock}
-                </td>
 
-                <td className="space-x-2 p-4 text-center">
-                  <Link
-  href={`/admin/products/edit/${product.id}`}
-  className="rounded bg-blue-600 px-4 py-2 inline-block"
->
-  Edit
-</Link>
+                </span>
 
-                  <button
-                    onClick={() => deleteProduct(product.id)}
-                    className="rounded bg-red-600 px-4 py-2"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+              </td>
 
-            {products.length === 0 && (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="p-6 text-center text-gray-400"
+              <td className="space-x-2 p-5 text-center">
+
+                <Link
+                  href={`/admin/products/edit/${product.id}`}
+                  className="inline-block rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-700"
                 >
-                  No products found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
+                  Edit
+                </Link>
+
+                <button
+                  onClick={() => deleteProduct(product.id)}
+                  className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700"
+                >
+                  Delete
+                </button>
+
+              </td>
+
+            </tr>
+
+          ))}
+
+          {products.length === 0 && (
+
+            <tr>
+
+              <td
+                colSpan={6}
+                className="py-10 text-center text-gray-400"
+              >
+                No products found.
+              </td>
+
+            </tr>
+
+          )}
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </main>
+);
 }
