@@ -269,7 +269,7 @@ export default function Navbar() {
 
         {/* Desktop Navigation */}
 
-        <div className="hidden items-center gap-2 md:flex">
+<nav className="hidden items-center gap-8 lg:flex">
           {links.map((link) => {
             const active =
               pathname === link.href;
@@ -304,7 +304,7 @@ export default function Navbar() {
           {!authLoading && (
             <>
               {!user ? (
-                <div className="hidden items-center gap-2 lg:flex">
+                <div className="hidden items-center gap-2 md:flex">
                   <Link
                     href="/login"
                     className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-[#181818] px-4 py-3 text-sm font-bold text-white transition hover:border-red-600 hover:bg-red-600"
