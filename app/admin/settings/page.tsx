@@ -129,55 +129,105 @@ export default function SettingsPage() {
   }
 
   async function saveSettings() {
-    try {
-      setSaving(true);
-      setSuccess("");
-      setError("");
+  try {
+    setSaving(true);
+    setSuccess("");
+    setError("");
 
-      const payload = {
-        id: 1,
+    const payload = {
+      id: 1,
 
-        store_name: settings.storeName,
-        store_email: settings.storeEmail,
-        support_email: settings.supportEmail,
-        phone: settings.phone,
+      store_name: settings.storeName.trim(),
+      store_email: settings.storeEmail.trim(),
+      support_email: settings.supportEmail.trim(),
+      phone: settings.phone.trim(),
 
-        currency: settings.currency,
-        timezone: settings.timezone,
+      currency: settings.currency,
+      timezone: settings.timezone,
 
-        order_prefix: settings.orderPrefix,
+      order_prefix:
+        settings.orderPrefix.trim().toUpperCase(),
 
-        email_notifications:
-          settings.emailNotifications,
+      email_notifications:
+        settings.emailNotifications,
 
-        order_notifications:
-          settings.orderNotifications,
+      order_notifications:
+        settings.orderNotifications,
 
-        low_stock_notifications:
-          settings.lowStockNotifications,
-      };
+      low_stock_notifications:
+        settings.lowStockNotifications,
 
-      const { error } = await supabase
-        .from("settings")
-        .upsert(payload);
+      updated_at: new Date().toISOString(),
+    };
 
-      if (error) throw error;
+    const {
+      data,
+      error: saveError,
+    } = await supabase
+      .from("settings")
+      .upsert(payload, {
+        onConflict: "id",
+      })
+      .select()
+      .single();
 
-      setSuccess(
-        "Settings saved successfully."
+    if (saveError) {
+      console.error(
+        "Supabase settings save error:",
+        saveError
       );
-    } catch (err) {
-      console.error(err);
+
+      const details = [
+        saveError.message,
+        saveError.details,
+        saveError.hint,
+        saveError.code
+          ? `Error code: ${saveError.code}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" — ");
 
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to save settings."
+        details ||
+          "Supabase rejected the settings update."
       );
-    } finally {
-      setSaving(false);
+
+      return;
     }
+
+    console.log(
+      "Settings saved successfully:",
+      data
+    );
+
+    setSuccess(
+      "Settings saved successfully."
+    );
+  } catch (unexpectedError: unknown) {
+    console.error(
+      "Unexpected settings error:",
+      unexpectedError
+    );
+
+    if (
+      typeof unexpectedError === "object" &&
+      unexpectedError !== null
+    ) {
+      setError(
+        JSON.stringify(
+          unexpectedError,
+          null,
+          2
+        )
+      );
+    } else {
+      setError(String(unexpectedError));
+    }
+  } finally {
+    setSaving(false);
   }
+}
 
   if (loading) {
     return (
