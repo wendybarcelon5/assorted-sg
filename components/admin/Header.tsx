@@ -4,6 +4,7 @@ import {
   Bell,
   CheckCheck,
   Search,
+  Trash2,
   UserCircle2,
 } from "lucide-react";
 
@@ -31,10 +32,7 @@ function formatNotificationTime(date: string) {
   const currentTime = Date.now();
 
   const difference = currentTime - createdTime;
-
-  const minutes = Math.floor(
-    difference / 60000
-  );
+  const minutes = Math.floor(difference / 60000);
 
   if (minutes < 1) {
     return "Just now";
@@ -46,9 +44,7 @@ function formatNotificationTime(date: string) {
     } ago`;
   }
 
-  const hours = Math.floor(
-    minutes / 60
-  );
+  const hours = Math.floor(minutes / 60);
 
   if (hours < 24) {
     return `${hours} hour${
@@ -56,9 +52,7 @@ function formatNotificationTime(date: string) {
     } ago`;
   }
 
-  const days = Math.floor(
-    hours / 24
-  );
+  const days = Math.floor(hours / 24);
 
   return `${days} day${
     days === 1 ? "" : "s"
@@ -78,59 +72,55 @@ export default function Header() {
   const [updatingNotifications, setUpdatingNotifications] =
     useState(false);
 
+  const [deletingNotificationId, setDeletingNotificationId] =
+    useState<number | null>(null);
+
   const notificationRef =
     useRef<HTMLDivElement | null>(null);
 
   const unreadNotifications = useMemo(
     () =>
       notifications.filter(
-        (notification) =>
-          !notification.is_read
+        (notification) => !notification.is_read
       ).length,
     [notifications]
   );
 
-  const loadNotifications =
-    useCallback(async () => {
-      try {
-        setLoadingNotifications(true);
+  const loadNotifications = useCallback(async () => {
+    try {
+      setLoadingNotifications(true);
 
-        const {
-          data,
-          error,
-        } = await supabase
-          .from("notifications")
-          .select("*")
-          .order("created_at", {
-            ascending: false,
-          })
-          .limit(20);
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .order("created_at", {
+          ascending: false,
+        })
+        .limit(20);
 
-        if (error) {
-          throw error;
-        }
-
-        setNotifications(
-          (data ?? []) as Notification[]
-        );
-      } catch (error) {
-        console.error(
-          "Unable to load notifications:",
-          error
-        );
-      } finally {
-        setLoadingNotifications(false);
+      if (error) {
+        throw error;
       }
-    }, []);
+
+      setNotifications(
+        (data ?? []) as Notification[]
+      );
+    } catch (error) {
+      console.error(
+        "Unable to load notifications:",
+        error
+      );
+    } finally {
+      setLoadingNotifications(false);
+    }
+  }, []);
 
   useEffect(() => {
     void loadNotifications();
   }, [loadNotifications]);
 
   useEffect(() => {
-    function handleOutsideClick(
-      event: MouseEvent
-    ) {
+    function handleOutsideClick(event: MouseEvent) {
       if (
         notificationRef.current &&
         !notificationRef.current.contains(
@@ -173,17 +163,15 @@ export default function Header() {
         throw error;
       }
 
-      setNotifications(
-        (currentNotifications) =>
-          currentNotifications.map(
-            (item) =>
-              item.id === notification.id
-                ? {
-                    ...item,
-                    is_read: true,
-                  }
-                : item
-          )
+      setNotifications((currentNotifications) =>
+        currentNotifications.map((item) =>
+          item.id === notification.id
+            ? {
+                ...item,
+                is_read: true,
+              }
+            : item
+        )
       );
     } catch (error) {
       console.error(
@@ -212,14 +200,13 @@ export default function Header() {
         throw error;
       }
 
-      setNotifications(
-        (currentNotifications) =>
-          currentNotifications.map(
-            (notification) => ({
-              ...notification,
-              is_read: true,
-            })
-          )
+      setNotifications((currentNotifications) =>
+        currentNotifications.map(
+          (notification) => ({
+            ...notification,
+            is_read: true,
+          })
+        )
       );
     } catch (error) {
       console.error(
@@ -228,6 +215,51 @@ export default function Header() {
       );
     } finally {
       setUpdatingNotifications(false);
+    }
+  }
+
+  async function deleteNotification(
+    notification: Notification
+  ) {
+    const confirmed = window.confirm(
+      `Delete "${notification.title}"?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingNotificationId(
+        notification.id
+      );
+
+      const { error } = await supabase
+        .from("notifications")
+        .delete()
+        .eq("id", notification.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setNotifications((currentNotifications) =>
+        currentNotifications.filter(
+          (item) =>
+            item.id !== notification.id
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Unable to delete notification:",
+        error
+      );
+
+      window.alert(
+        "Unable to delete this notification."
+      );
+    } finally {
+      setDeletingNotificationId(null);
     }
   }
 
@@ -264,9 +296,7 @@ export default function Header() {
           <button
             type="button"
             aria-label="Open notifications"
-            aria-expanded={
-              notificationOpen
-            }
+            aria-expanded={notificationOpen}
             onClick={() =>
               setNotificationOpen(
                 (current) => !current
@@ -286,7 +316,7 @@ export default function Header() {
           </button>
 
           {notificationOpen && (
-            <div className="absolute right-0 top-14 z-50 w-[360px] overflow-hidden rounded-2xl border border-white/10 bg-[#111827] shadow-2xl">
+            <div className="absolute right-0 top-14 z-50 w-[380px] overflow-hidden rounded-2xl border border-white/10 bg-[#111827] shadow-2xl">
               <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                 <div>
                   <h2 className="font-black text-white">
@@ -339,52 +369,72 @@ export default function Header() {
                 ) : (
                   notifications.map(
                     (notification) => (
-                      <button
-                        key={
-                          notification.id
-                        }
-                        type="button"
-                        onClick={() =>
-                          void markNotificationAsRead(
-                            notification
-                          )
-                        }
-                        className={`block w-full border-b border-white/5 px-5 py-4 text-left transition hover:bg-white/5 ${
+                      <div
+                        key={notification.id}
+                        className={`flex items-start gap-3 border-b border-white/5 px-5 py-4 transition hover:bg-white/5 ${
                           notification.is_read
                             ? "bg-transparent"
                             : "bg-red-500/5"
                         }`}
                       >
-                        <div className="flex items-start gap-3">
-                          <span
-                            className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${
-                              notification.is_read
-                                ? "bg-gray-700"
-                                : "bg-red-500"
-                            }`}
-                          />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void markNotificationAsRead(
+                              notification
+                            )
+                          }
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <div className="flex items-start gap-3">
+                            <span
+                              className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${
+                                notification.is_read
+                                  ? "bg-gray-700"
+                                  : "bg-red-500"
+                              }`}
+                            />
 
-                          <div className="min-w-0">
-                            <p className="font-bold text-white">
-                              {
-                                notification.title
-                              }
-                            </p>
+                            <div className="min-w-0">
+                              <p className="font-bold text-white">
+                                {
+                                  notification.title
+                                }
+                              </p>
 
-                            <p className="mt-1 text-sm leading-6 text-gray-400">
-                              {
-                                notification.message
-                              }
-                            </p>
+                              <p className="mt-1 text-sm leading-6 text-gray-400">
+                                {
+                                  notification.message
+                                }
+                              </p>
 
-                            <p className="mt-2 text-xs text-gray-600">
-                              {formatNotificationTime(
-                                notification.created_at
-                              )}
-                            </p>
+                              <p className="mt-2 text-xs text-gray-600">
+                                {formatNotificationTime(
+                                  notification.created_at
+                                )}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      </button>
+                        </button>
+
+                        <button
+                          type="button"
+                          aria-label={`Delete ${notification.title}`}
+                          title="Delete notification"
+                          disabled={
+                            deletingNotificationId ===
+                            notification.id
+                          }
+                          onClick={() =>
+                            void deleteNotification(
+                              notification
+                            )
+                          }
+                          className="mt-1 shrink-0 rounded-lg p-2 text-gray-500 transition hover:bg-red-500/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Trash2 size={17} />
+                        </button>
+                      </div>
                     )
                   )
                 )}
