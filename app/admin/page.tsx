@@ -15,7 +15,7 @@ export default function AdminDashboard() {
         <p className="mt-3 text-lg text-gray-200">
           Welcome back,
           <span className="font-bold text-[#D4AF37]">
-            {" "}Wendy
+            {" "}Assorted SG
           </span>
           👋
         </p>

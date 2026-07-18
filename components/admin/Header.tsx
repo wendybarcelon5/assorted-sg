@@ -19,7 +19,7 @@ export default function Header() {
         </h1>
 
         <p className="mt-1 text-sm text-gray-400">
-          Welcome back, Wendy 👋
+          Welcome back, Assorted SG 👋
         </p>
 
       </div>
@@ -67,7 +67,7 @@ export default function Header() {
           <div className="hidden text-left lg:block">
 
             <p className="font-bold text-white">
-              Wendy
+              Assorted SG
             </p>
 
             <p className="text-xs text-green-400">
