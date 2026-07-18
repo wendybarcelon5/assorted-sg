@@ -174,55 +174,55 @@ export default function Footer() {
             </h3>
 
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
-              <div className="flex min-h-16 items-center justify-center rounded-xl border border-white/10 bg-white p-2">
-                <Image
-                  src="/payments/gcash.png"
-                  alt="GCash"
-                  width={90}
-                  height={55}
-                  className="h-12 w-auto object-contain"
-                />
-              </div>
+              <div className="flex items-center justify-center p-2">
+  <Image
+    src="/payments/gcash.png"
+    alt="GCash"
+    width={90}
+    height={55}
+    className="h-12 w-auto object-contain transition duration-300 hover:scale-110"
+  />
+</div>
 
-              <div className="flex min-h-16 items-center justify-center rounded-xl border border-white/10 bg-white p-2">
-                <Image
-                  src="/payments/maya.png"
-                  alt="Maya"
-                  width={90}
-                  height={55}
-                  className="h-12 w-auto object-contain"
-                />
-              </div>
+              <div className="flex items-center justify-center p-2">
+  <Image
+    src="/payments/maya.png"
+    alt="Maya"
+    width={90}
+    height={55}
+    className="h-12 w-auto object-contain transition duration-300 hover:scale-110"
+  />
+</div>
 
-              <div className="flex min-h-16 items-center justify-center rounded-xl border border-white/10 bg-white p-2">
-                <Image
-                  src="/payments/visa.png"
-                  alt="Visa"
-                  width={90}
-                  height={55}
-                  className="h-12 w-auto object-contain"
-                />
-              </div>
+             <div className="flex items-center justify-center p-2">
+  <Image
+    src="/payments/visa.png"
+    alt="Visa"
+    width={90}
+    height={55}
+    className="h-12 w-auto object-contain transition duration-300 hover:scale-110"
+  />
+</div>
 
-              <div className="flex min-h-16 items-center justify-center rounded-xl border border-white/10 bg-white p-2">
-                <Image
-                  src="/payments/mastercard.png"
-                  alt="Mastercard"
-                  width={90}
-                  height={55}
-                  className="h-12 w-auto object-contain"
-                />
-              </div>
+              <div className="flex items-center justify-center p-2">
+  <Image
+    src="/payments/mastercard.png"
+    alt="Mastercard"
+    width={90}
+    height={55}
+    className="h-12 w-auto object-contain transition duration-300 hover:scale-110"
+  />
+</div>
 
-              <div className="flex min-h-16 items-center justify-center rounded-xl border border-white/10 bg-white p-2">
-                <Image
-                  src="/payments/cod.png"
-                  alt="Cash on Delivery"
-                  width={90}
-                  height={55}
-                  className="h-12 w-auto object-contain"
-                />
-              </div>
+             <div className="flex items-center justify-center p-2">
+  <Image
+    src="/payments/cod.png"
+    alt="COD"
+    width={90}
+    height={55}
+    className="h-12 w-auto object-contain transition duration-300 hover:scale-110"
+  />
+</div>
             </div>
           </div>
         </div>
