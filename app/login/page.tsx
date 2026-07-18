@@ -35,7 +35,7 @@ export default function LoginPage() {
 
       alert("Logged in successfully!");
 
-      router.push("/account");
+      router.push("/");
       router.refresh();
     } catch (error) {
       console.error("Login error:", error);
