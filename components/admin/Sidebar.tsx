@@ -88,10 +88,11 @@ export default function Sidebar() {
       {/* Sidebar */}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-72 flex-col bg-[#111827] text-white transition-transform duration-300 lg:translate-x-0 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
+  className={`fixed left-0 top-0 z-50 h-screen w-72 border-r border-white/10 bg-[#111827] text-white transition-transform duration-300
+  ${
+    open ? "translate-x-0" : "-translate-x-full"
+  } lg:translate-x-0`}
+>
         {/* Header */}
 
         <div className="flex items-center justify-between border-b border-white/10 p-6">
