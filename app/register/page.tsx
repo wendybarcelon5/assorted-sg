@@ -73,7 +73,7 @@ export default function RegisterPage() {
           "Account created successfully!"
         );
 
-        router.push("/account");
+        router.push("/");
         router.refresh();
         return;
       }
