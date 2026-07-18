@@ -2,7 +2,7 @@ import DashboardStats from "@/components/admin/DashboardStats";
 
 export default function AdminDashboard() {
   return (
-    <div className="space-y-8">
+    <main className="admin-page space-y-8">
 
       {/* Welcome */}
 
@@ -30,7 +30,7 @@ export default function AdminDashboard() {
 
       <DashboardStats />
 
-      {/* Recent Orders */}
+            {/* Recent Orders */}
 
       <div className="rounded-3xl border border-white/10 bg-[#1E293B] p-8 shadow-xl">
 
@@ -44,6 +44,6 @@ export default function AdminDashboard() {
 
       </div>
 
-    </div>
+    </main>
   );
 }
