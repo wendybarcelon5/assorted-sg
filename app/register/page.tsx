@@ -13,11 +13,13 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
+  const [confirmPassword, setConfirmPassword] =
+    useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleRegister(event: React.FormEvent) {
+  async function handleRegister(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
 
     if (loading) {
@@ -25,7 +27,9 @@ export default function RegisterPage() {
     }
 
     if (password.length < 6) {
-      alert("Password must be at least 6 characters.");
+      alert(
+        "Password must be at least 6 characters."
+      );
       return;
     }
 
@@ -37,69 +41,57 @@ export default function RegisterPage() {
     try {
       setLoading(true);
 
-      const {
-        data: authData,
-        error: authError,
-      } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
+      const { data, error } =
+        await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            emailRedirectTo:
+              "https://assortedsg.vercel.app/login",
+            data: {
+              full_name: fullName.trim(),
+              phone: phone.trim(),
+              address: address.trim(),
+            },
           },
-        },
-      });
-
-      if (authError) {
-        alert(authError.message);
-        return;
-      }
-
-      const user = authData.user;
-
-      if (!user) {
-        alert("Unable to create your account.");
-        return;
-      }
-
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .insert({
-          id: user.id,
-          full_name: fullName,
-          email,
-          phone,
-          address,
         });
 
-      if (profileError) {
-        console.error("Profile creation error:", profileError);
-
-        alert(
-          "Your account was created, but your customer profile could not be saved."
-        );
-
+      if (error) {
+        alert(error.message);
         return;
       }
 
-      if (authData.session) {
-        alert("Account created successfully!");
+      if (!data.user) {
+        alert(
+          "Unable to create your account."
+        );
+        return;
+      }
+
+      if (data.session) {
+        alert(
+          "Account created successfully!"
+        );
 
         router.push("/account");
         router.refresh();
-
         return;
       }
 
       alert(
-        "Account created successfully. Please check your email to confirm your account before logging in."
+        "Account created successfully. Please check your email and confirm your account before logging in."
       );
 
       router.push("/login");
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error(
+        "Registration error:",
+        error
+      );
 
-      alert("Something went wrong while creating your account.");
+      alert(
+        "Something went wrong while creating your account."
+      );
     } finally {
       setLoading(false);
     }
@@ -119,7 +111,9 @@ export default function RegisterPage() {
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-gray-400">
-              Register to view your orders, manage your profile, and leave product reviews.
+              Register to view your orders,
+              manage your profile, and leave
+              product reviews.
             </p>
           </div>
 
@@ -140,7 +134,9 @@ export default function RegisterPage() {
                 type="text"
                 value={fullName}
                 onChange={(event) =>
-                  setFullName(event.target.value)
+                  setFullName(
+                    event.target.value
+                  )
                 }
                 placeholder="Enter your full name"
                 required
@@ -162,7 +158,9 @@ export default function RegisterPage() {
                 type="email"
                 value={email}
                 onChange={(event) =>
-                  setEmail(event.target.value)
+                  setEmail(
+                    event.target.value
+                  )
                 }
                 placeholder="Enter your email"
                 required
@@ -184,7 +182,9 @@ export default function RegisterPage() {
                 type="tel"
                 value={phone}
                 onChange={(event) =>
-                  setPhone(event.target.value)
+                  setPhone(
+                    event.target.value
+                  )
                 }
                 placeholder="Enter your phone number"
                 required
@@ -205,7 +205,9 @@ export default function RegisterPage() {
                 id="address"
                 value={address}
                 onChange={(event) =>
-                  setAddress(event.target.value)
+                  setAddress(
+                    event.target.value
+                  )
                 }
                 placeholder="Enter your delivery address"
                 required
@@ -228,7 +230,9 @@ export default function RegisterPage() {
                 type="password"
                 value={password}
                 onChange={(event) =>
-                  setPassword(event.target.value)
+                  setPassword(
+                    event.target.value
+                  )
                 }
                 placeholder="At least 6 characters"
                 required
@@ -251,7 +255,9 @@ export default function RegisterPage() {
                 type="password"
                 value={confirmPassword}
                 onChange={(event) =>
-                  setConfirmPassword(event.target.value)
+                  setConfirmPassword(
+                    event.target.value
+                  )
                 }
                 placeholder="Enter your password again"
                 required
