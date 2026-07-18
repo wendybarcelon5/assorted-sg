@@ -73,15 +73,12 @@ export default function Navbar() {
               Premium Streetwear
             </p>
           </div>
-
         </Link>
 
         {/* Desktop Navigation */}
 
         <nav className="hidden items-center gap-10 lg:flex">
-
           {links.map((link) => {
-
             const active = pathname === link.href;
 
             return (
@@ -103,12 +100,9 @@ export default function Navbar() {
                       : "w-0 group-hover:w-full"
                   }`}
                 />
-
               </Link>
             );
-
           })}
-
         </nav>
 
         {/* Right Side */}
@@ -116,34 +110,41 @@ export default function Navbar() {
         <div className="flex items-center gap-4">
 
           <Link
-  href="/cart"
-  className="group relative rounded-full border border-white/10 bg-[#181818] p-3 text-white transition-all duration-300 hover:border-red-600 hover:bg-red-600"
->
+            href="/cart"
+            className="group relative rounded-full border border-white/10 bg-[#181818] p-3 text-white transition-all duration-300 hover:border-red-600 hover:bg-red-600"
+          >
+            <ShoppingCart
+              size={22}
+              className="text-white transition-colors duration-300"
+            />
 
-  <ShoppingCart
-    size={22}
-    className="text-white transition-colors duration-300"
-  />
+            {totalItems > 0 && (
+              <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white">
+                {totalItems}
+              </span>
+            )}
+          </Link>
 
-  {totalItems > 0 && (
-    <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white">
-      {totalItems}
-    </span>
-  )}
-
-</Link>
+          {/* Mobile Menu Button */}
 
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="rounded-xl border border-white/10 p-2 transition hover:border-red-600 lg:hidden"
+            className="rounded-xl border border-white/10 p-2 text-white transition hover:border-red-600 hover:bg-red-600 lg:hidden"
+            aria-label="Toggle Menu"
           >
-
             {mobileOpen ? (
-              <X size={26} />
+              <X
+                size={28}
+                className="text-white"
+                strokeWidth={2.5}
+              />
             ) : (
-              <Menu size={26} />
+              <Menu
+                size={28}
+                className="text-white"
+                strokeWidth={2.5}
+              />
             )}
-
           </button>
 
         </div>
@@ -153,7 +154,7 @@ export default function Navbar() {
       {/* Mobile Menu */}
 
       <div
-        className={`overflow-hidden border-t border-white/10 bg-black transition-all duration-300 lg:hidden ${
+        className={`overflow-hidden border-t border-white/10 bg-[#111827] transition-all duration-300 lg:hidden ${
           mobileOpen
             ? "max-h-[500px]"
             : "max-h-0"
@@ -169,15 +170,18 @@ export default function Navbar() {
             <Link
               key={link.name}
               href={link.href}
-              className={`flex items-center gap-3 border-b border-white/5 px-6 py-5 font-bold uppercase tracking-widest transition ${
+              className={`flex items-center gap-3 border-b border-white/10 px-6 py-5 text-base font-bold uppercase tracking-widest transition ${
                 active
                   ? "bg-red-600 text-white"
-                  : "hover:bg-[#181818]"
+                  : "text-white hover:bg-[#1E293B]"
               }`}
             >
 
               {link.name === "Track Order" && (
-                <PackageSearch size={18} />
+                <PackageSearch
+                  size={18}
+                  className="text-white"
+                />
               )}
 
               {link.name}
@@ -192,4 +196,4 @@ export default function Navbar() {
 
     </header>
   );
-}   
+}
