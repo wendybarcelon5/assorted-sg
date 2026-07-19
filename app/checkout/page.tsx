@@ -272,7 +272,7 @@ export default function CheckoutPage() {
         "Order placed successfully!"
       );
 
-      router.push("/my-orders");
+      router.push("/");
       router.refresh();
     } catch (error) {
       console.error(
