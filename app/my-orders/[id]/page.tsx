@@ -10,6 +10,7 @@ import {
   Phone,
   RefreshCw,
   ShoppingBag,
+  Star,
   User,
 } from "lucide-react";
 import Link from "next/link";
@@ -38,6 +39,11 @@ type OrderItem = {
   product_name: string | null;
   quantity: number | string | null;
   price: number | string | null;
+};
+
+type ReviewRow = {
+  id: string;
+  product_id: string | number;
 };
 
 function formatCurrency(value: number) {
@@ -122,6 +128,9 @@ export default function OrderDetailsPage() {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [items, setItems] = useState<OrderItem[]>([]);
+  const [reviewedProductIds, setReviewedProductIds] = useState<Set<string>>(
+    new Set()
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -151,15 +160,14 @@ export default function OrderDetailsPage() {
         return;
       }
 
-      const { data: orderData, error: orderError } =
-        await supabase
-          .from("orders")
-          .select(
-            "id, user_id, customer_name, email, phone, address, total, status, payment_status, payment_method, receipt_url, created_at"
-          )
-          .eq("id", orderId)
-          .eq("user_id", user.id)
-          .maybeSingle();
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .select(
+          "id, user_id, customer_name, email, phone, address, total, status, payment_status, payment_method, receipt_url, created_at"
+        )
+        .eq("id", orderId)
+        .eq("user_id", user.id)
+        .maybeSingle();
 
       if (orderError) {
         throw orderError;
@@ -171,24 +179,53 @@ export default function OrderDetailsPage() {
         );
         setOrder(null);
         setItems([]);
+        setReviewedProductIds(new Set());
         return;
       }
 
-      const { data: itemData, error: itemError } =
-        await supabase
-          .from("order_items")
-          .select(
-            "id, order_id, product_id, product_name, quantity, price"
-          )
-          .eq("order_id", orderId)
-          .order("id", { ascending: true });
+      const { data: itemData, error: itemError } = await supabase
+        .from("order_items")
+        .select("id, order_id, product_id, product_name, quantity, price")
+        .eq("order_id", orderId)
+        .order("id", { ascending: true });
 
       if (itemError) {
         throw itemError;
       }
 
+      const normalizedItems = (itemData ?? []) as OrderItem[];
       setOrder(orderData as Order);
-      setItems((itemData ?? []) as OrderItem[]);
+      setItems(normalizedItems);
+
+      const productIds = normalizedItems
+        .map((item) => item.product_id)
+        .filter(
+          (productId): productId is string | number =>
+            productId !== null && productId !== undefined
+        );
+
+      if (productIds.length === 0) {
+        setReviewedProductIds(new Set());
+        return;
+      }
+
+      const { data: reviewData, error: reviewError } = await supabase
+        .from("reviews")
+        .select("id, product_id")
+        .eq("user_id", user.id)
+        .in("product_id", productIds);
+
+      if (reviewError) {
+        throw reviewError;
+      }
+
+      const reviewedIds = new Set(
+        ((reviewData ?? []) as ReviewRow[]).map((review) =>
+          String(review.product_id)
+        )
+      );
+
+      setReviewedProductIds(reviewedIds);
     } catch (error) {
       console.error("Order details error:", error);
 
@@ -204,7 +241,7 @@ export default function OrderDetailsPage() {
   }
 
   useEffect(() => {
-    loadOrder();
+    void loadOrder();
   }, [orderId]);
 
   const itemsSubtotal = useMemo(() => {
@@ -218,18 +255,15 @@ export default function OrderDetailsPage() {
   }, [items]);
 
   const orderTotal = Number(order?.total ?? 0);
-
-  const shippingFee = Math.max(
-    orderTotal - itemsSubtotal,
-    0
-  );
+  const shippingFee = Math.max(orderTotal - itemsSubtotal, 0);
+  const isDelivered =
+    order?.status?.toLowerCase().includes("delivered") ?? false;
 
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-black px-4 text-white">
         <div className="text-center">
           <RefreshCw className="mx-auto h-10 w-10 animate-spin text-red-500" />
-
           <p className="mt-4 font-bold text-gray-300">
             Loading order details...
           </p>
@@ -252,7 +286,7 @@ export default function OrderDetailsPage() {
 
           <button
             type="button"
-            onClick={() => loadOrder(true)}
+            onClick={() => void loadOrder(true)}
             disabled={refreshing}
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-bold transition hover:border-red-500 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -260,26 +294,17 @@ export default function OrderDetailsPage() {
               size={18}
               className={refreshing ? "animate-spin" : ""}
             />
-
             {refreshing ? "Refreshing..." : "Refresh"}
           </button>
         </div>
 
         {errorMessage && (
           <section className="rounded-3xl border border-red-500/30 bg-red-500/10 p-8 text-center">
-            <Package
-              size={48}
-              className="mx-auto text-red-400"
-            />
-
+            <Package size={48} className="mx-auto text-red-400" />
             <h1 className="mt-4 text-2xl font-black">
               Unable to open order
             </h1>
-
-            <p className="mt-3 text-red-200">
-              {errorMessage}
-            </p>
-
+            <p className="mt-3 text-red-200">{errorMessage}</p>
             <Link
               href="/my-orders"
               className="mt-6 inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-3 font-black transition hover:bg-red-500"
@@ -298,11 +323,9 @@ export default function OrderDetailsPage() {
                   <p className="text-sm font-black uppercase tracking-[0.3em] text-red-500">
                     Order Details
                   </p>
-
                   <h1 className="mt-3 text-4xl font-black md:text-5xl">
                     Order #{String(order.id).slice(0, 8)}
                   </h1>
-
                   <div className="mt-4 flex items-center gap-2 text-gray-400">
                     <CalendarDays size={18} />
                     <span>{formatDate(order.created_at)}</span>
@@ -314,7 +337,6 @@ export default function OrderDetailsPage() {
                     <p className="text-xs font-black uppercase tracking-wider text-gray-500">
                       Order Status
                     </p>
-
                     <span
                       className={`mt-3 inline-flex rounded-full border px-3 py-1.5 text-xs font-black ${getOrderStatusStyle(
                         order.status
@@ -328,7 +350,6 @@ export default function OrderDetailsPage() {
                     <p className="text-xs font-black uppercase tracking-wider text-gray-500">
                       Payment Status
                     </p>
-
                     <span
                       className={`mt-3 inline-flex rounded-full border px-3 py-1.5 text-xs font-black ${getPaymentStatusStyle(
                         order.payment_status
@@ -349,12 +370,8 @@ export default function OrderDetailsPage() {
                       <div className="rounded-2xl bg-red-500/10 p-3 text-red-400">
                         <ShoppingBag size={24} />
                       </div>
-
                       <div>
-                        <h2 className="text-2xl font-black">
-                          Products
-                        </h2>
-
+                        <h2 className="text-2xl font-black">Products</h2>
                         <p className="mt-1 text-sm text-gray-400">
                           {items.length} item
                           {items.length === 1 ? "" : "s"} in this order
@@ -370,30 +387,22 @@ export default function OrderDetailsPage() {
                   ) : (
                     <div className="divide-y divide-white/10">
                       {items.map((item, index) => {
-                        const quantity = Number(
-                          item.quantity ?? 0
-                        );
-
-                        const price = Number(
-                          item.price ?? 0
-                        );
-
-                        const subtotal =
-                          quantity * price;
+                        const quantity = Number(item.quantity ?? 0);
+                        const price = Number(item.price ?? 0);
+                        const subtotal = quantity * price;
+                        const reviewed =
+                          item.product_id !== null &&
+                          reviewedProductIds.has(String(item.product_id));
 
                         return (
                           <article
-                            key={
-                              item.id ??
-                              `${item.product_id}-${index}`
-                            }
+                            key={item.id ?? `${item.product_id}-${index}`}
                             className="p-6 md:p-7"
                           >
                             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                               <div>
                                 <p className="text-lg font-black">
-                                  {item.product_name ||
-                                    "Unnamed Product"}
+                                  {item.product_name || "Unnamed Product"}
                                 </p>
 
                                 <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-400">
@@ -403,27 +412,40 @@ export default function OrderDetailsPage() {
                                       {quantity}
                                     </strong>
                                   </span>
-
                                   <span>
                                     Price:{" "}
                                     <strong className="text-white">
-                                      {formatCurrency(
-                                        price
-                                      )}
+                                      {formatCurrency(price)}
                                     </strong>
                                   </span>
                                 </div>
+
+                                {isDelivered && item.product_id !== null && (
+                                  <Link
+                                    href={`/review?order=${order.id}&product=${item.product_id}`}
+                                    className={`mt-5 inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-black transition ${
+                                      reviewed
+                                        ? "border-[#D4AF37]/40 bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37]/20"
+                                        : "border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-600 hover:text-white"
+                                    }`}
+                                  >
+                                    <Star
+                                      size={18}
+                                      fill={reviewed ? "currentColor" : "none"}
+                                    />
+                                    {reviewed
+                                      ? "Edit Review"
+                                      : "Leave Review (Optional)"}
+                                  </Link>
+                                )}
                               </div>
 
                               <div className="sm:text-right">
                                 <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                                   Subtotal
                                 </p>
-
                                 <p className="mt-2 text-xl font-black text-[#D4AF37]">
-                                  {formatCurrency(
-                                    subtotal
-                                  )}
+                                  {formatCurrency(subtotal)}
                                 </p>
                               </div>
                             </div>
@@ -439,12 +461,10 @@ export default function OrderDetailsPage() {
                     <div className="rounded-2xl bg-blue-500/10 p-3 text-blue-400">
                       <MapPin size={24} />
                     </div>
-
                     <div>
                       <h2 className="text-2xl font-black">
                         Delivery Information
                       </h2>
-
                       <p className="mt-1 text-sm text-gray-400">
                         Shipping details used for this order
                       </p>
@@ -459,12 +479,9 @@ export default function OrderDetailsPage() {
                           Customer
                         </p>
                       </div>
-
                       <p className="mt-3 font-bold">
-                        {order.customer_name ||
-                          "Not provided"}
+                        {order.customer_name || "Not provided"}
                       </p>
-
                       <p className="mt-1 text-sm text-gray-400">
                         {order.email || "No email"}
                       </p>
@@ -477,10 +494,8 @@ export default function OrderDetailsPage() {
                           Phone
                         </p>
                       </div>
-
                       <p className="mt-3 font-bold">
-                        {order.phone ||
-                          "Not provided"}
+                        {order.phone || "Not provided"}
                       </p>
                     </div>
 
@@ -491,10 +506,8 @@ export default function OrderDetailsPage() {
                           Delivery Address
                         </p>
                       </div>
-
                       <p className="mt-3 whitespace-pre-line leading-7 text-gray-200">
-                        {order.address ||
-                          "No delivery address provided"}
+                        {order.address || "No delivery address provided"}
                       </p>
                     </div>
                   </div>
@@ -507,12 +520,8 @@ export default function OrderDetailsPage() {
                     <div className="rounded-2xl bg-green-500/10 p-3 text-green-400">
                       <CreditCard size={24} />
                     </div>
-
                     <div>
-                      <h2 className="text-2xl font-black">
-                        Payment
-                      </h2>
-
+                      <h2 className="text-2xl font-black">Payment</h2>
                       <p className="mt-1 text-sm text-gray-400">
                         Payment details for this order
                       </p>
@@ -521,28 +530,20 @@ export default function OrderDetailsPage() {
 
                   <div className="mt-7 space-y-4">
                     <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <span className="text-gray-400">
-                        Method
-                      </span>
-
+                      <span className="text-gray-400">Method</span>
                       <span className="text-right font-bold">
-                        {order.payment_method ||
-                          "Not provided"}
+                        {order.payment_method || "Not provided"}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <span className="text-gray-400">
-                        Status
-                      </span>
-
+                      <span className="text-gray-400">Status</span>
                       <span
                         className={`rounded-full border px-3 py-1.5 text-xs font-black ${getPaymentStatusStyle(
                           order.payment_status
                         )}`}
                       >
-                        {order.payment_status ||
-                          "Pending"}
+                        {order.payment_status || "Pending"}
                       </span>
                     </div>
 
@@ -560,40 +561,22 @@ export default function OrderDetailsPage() {
                 </section>
 
                 <section className="rounded-3xl border border-white/10 bg-[#111827] p-6 shadow-xl md:p-7">
-                  <h2 className="text-2xl font-black">
-                    Order Summary
-                  </h2>
-
+                  <h2 className="text-2xl font-black">Order Summary</h2>
                   <div className="mt-6 space-y-4">
                     <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                      <span className="text-gray-400">
-                        Items subtotal
-                      </span>
-
+                      <span className="text-gray-400">Items subtotal</span>
                       <span className="font-bold">
-                        {formatCurrency(
-                          itemsSubtotal
-                        )}
+                        {formatCurrency(itemsSubtotal)}
                       </span>
                     </div>
-
                     <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                      <span className="text-gray-400">
-                        Shipping
-                      </span>
-
+                      <span className="text-gray-400">Shipping</span>
                       <span className="font-bold">
-                        {formatCurrency(
-                          shippingFee
-                        )}
+                        {formatCurrency(shippingFee)}
                       </span>
                     </div>
-
                     <div className="flex items-center justify-between pt-1">
-                      <span className="text-lg font-black">
-                        Total
-                      </span>
-
+                      <span className="text-lg font-black">Total</span>
                       <span className="text-2xl font-black text-[#D4AF37]">
                         {formatCurrency(orderTotal)}
                       </span>
@@ -602,10 +585,7 @@ export default function OrderDetailsPage() {
                 </section>
 
                 <section className="rounded-3xl border border-white/10 bg-[#111827] p-6 shadow-xl md:p-7">
-                  <h2 className="text-xl font-black">
-                    Order Actions
-                  </h2>
-
+                  <h2 className="text-xl font-black">Order Actions</h2>
                   <div className="mt-5 grid gap-3">
                     <button
                       type="button"
@@ -615,16 +595,13 @@ export default function OrderDetailsPage() {
                       Track Order — Coming Soon
                     </button>
 
-                    {order.status
-                      ?.toLowerCase()
-                      .includes("delivered") && (
-                      <button
-                        type="button"
-                        disabled
-                        className="cursor-not-allowed rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-gray-500 opacity-60"
+                    {isDelivered && (
+                      <Link
+                        href="/my-reviews"
+                        className="rounded-xl border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-4 py-3 text-center font-bold text-[#D4AF37] transition hover:bg-[#D4AF37]/20"
                       >
-                        Leave Review — Coming Soon
-                      </button>
+                        View My Reviews
+                      </Link>
                     )}
 
                     <button
