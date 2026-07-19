@@ -4,12 +4,15 @@ import { useCart } from "@/app/context/CartContext";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 import {
+  Bell,
   ChevronDown,
   Heart,
   LogIn,
   LogOut,
+  MapPin,
   Menu,
   PackageSearch,
+  Settings,
   ShoppingBag,
   ShoppingCart,
   Star,
@@ -20,17 +23,25 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 
 const links = [
-  { name: "Home", href: "/" },
-  { name: "Shop", href: "/shop" },
-  { name: "About", href: "/about" },
-  { name: "Contact", href: "/contact" },
+  {
+    name: "Home",
+    href: "/",
+  },
+  {
+    name: "Shop",
+    href: "/shop",
+  },
+  {
+    name: "About",
+    href: "/about",
+  },
+  {
+    name: "Contact",
+    href: "/contact",
+  },
   {
     name: "Track Order",
     href: "/track-order",
@@ -63,6 +74,9 @@ export default function Navbar() {
 
   const [loggingOut, setLoggingOut] =
     useState(false);
+    
+  const [wishlistCount, setWishlistCount] =
+    useState(0);
 
   const accountMenuRef =
     useRef<HTMLDivElement | null>(null);
@@ -99,16 +113,26 @@ export default function Navbar() {
       try {
         const {
           data: { user: currentUser },
+          error,
         } = await supabase.auth.getUser();
+
+        if (error) {
+          console.error(
+            "Unable to load current user:",
+            error
+          );
+        }
 
         setUser(currentUser);
 
         if (currentUser) {
-          await loadProfile(
-            currentUser.id
-          );
+          await Promise.all([
+            loadProfile(currentUser.id),
+            loadWishlistCount(currentUser.id),
+          ]);
         } else {
           setProfile(null);
+          setWishlistCount(0);
         }
       } catch (error) {
         console.error(
@@ -132,11 +156,13 @@ export default function Navbar() {
         setUser(currentUser);
 
         if (currentUser) {
-          await loadProfile(
-            currentUser.id
-          );
+          await Promise.all([
+            loadProfile(currentUser.id),
+            loadWishlistCount(currentUser.id),
+          ]);
         } else {
           setProfile(null);
+          setWishlistCount(0);
         }
 
         setAuthLoading(false);
@@ -174,6 +200,54 @@ export default function Navbar() {
       );
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`wishlist-navbar-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "wishlist",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          void loadWishlistCount(user.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  async function loadWishlistCount(
+    userId: string
+  ) {
+    const { count, error } = await supabase
+      .from("wishlist")
+      .select("*", {
+        count: "exact",
+        head: true,
+      })
+      .eq("user_id", userId);
+
+    if (error) {
+      console.error(
+        "Unable to load wishlist count:",
+        error
+      );
+      return;
+    }
+
+    setWishlistCount(count ?? 0);
+  }
 
   async function loadProfile(
     userId: string
@@ -218,6 +292,9 @@ export default function Navbar() {
 
       setAccountOpen(false);
       setMobileOpen(false);
+      setUser(null);
+      setProfile(null);
+      setWishlistCount(0);
 
       router.push("/");
       router.refresh();
@@ -233,6 +310,16 @@ export default function Navbar() {
     } finally {
       setLoggingOut(false);
     }
+  }
+
+  function isActiveRoute(
+    href: string
+  ) {
+    if (href === "/") {
+      return pathname === "/";
+    }
+
+    return pathname.startsWith(href);
   }
 
   return (
@@ -269,10 +356,10 @@ export default function Navbar() {
 
         {/* Desktop Navigation */}
 
-<nav className="hidden items-center gap-8 lg:flex">
+        <nav className="hidden items-center gap-8 lg:flex">
           {links.map((link) => {
             const active =
-              pathname === link.href;
+              isActiveRoute(link.href);
 
             return (
               <Link
@@ -337,6 +424,7 @@ export default function Navbar() {
                     aria-expanded={
                       accountOpen
                     }
+                    aria-haspopup="menu"
                     className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#181818] px-4 py-3 text-white transition hover:border-red-600"
                   >
                     <UserCircle2
@@ -359,7 +447,10 @@ export default function Navbar() {
                   </button>
 
                   {accountOpen && (
-                    <div className="absolute right-0 top-14 w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111827] shadow-2xl">
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-14 max-h-[calc(100vh-9rem)] w-72 overflow-y-auto rounded-2xl border border-white/10 bg-[#111827] shadow-2xl"
+                    >
                       <div className="border-b border-white/10 px-5 py-4">
                         <p className="truncate font-black text-white">
                           {customerName}
@@ -373,7 +464,13 @@ export default function Navbar() {
                       <div className="p-2">
                         <Link
                           href="/account"
-                          className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-gray-300 transition hover:bg-white/5 hover:text-white"
+                          className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition ${
+                            isActiveRoute(
+                              "/account"
+                            )
+                              ? "bg-red-600 text-white"
+                              : "text-gray-300 hover:bg-white/5 hover:text-white"
+                          }`}
                         >
                           <UserCircle2
                             size={18}
@@ -383,17 +480,29 @@ export default function Navbar() {
 
                         <Link
                           href="/my-orders"
-                          className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-gray-300 transition hover:bg-white/5 hover:text-white"
+                          className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition ${
+                            isActiveRoute(
+                              "/my-orders"
+                            )
+                              ? "bg-red-600 text-white"
+                              : "text-gray-300 hover:bg-white/5 hover:text-white"
+                          }`}
                         >
                           <ShoppingBag
                             size={18}
                           />
-                          Order History
+                          My Orders
                         </Link>
 
                         <Link
                           href="/wishlist"
-                          className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-gray-300 transition hover:bg-white/5 hover:text-white"
+                          className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition ${
+                            isActiveRoute(
+                              "/wishlist"
+                            )
+                              ? "bg-red-600 text-white"
+                              : "text-gray-300 hover:bg-white/5 hover:text-white"
+                          }`}
                         >
                           <Heart size={18} />
                           Wishlist
@@ -401,11 +510,61 @@ export default function Navbar() {
 
                         <Link
                           href="/my-reviews"
-                          className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-gray-300 transition hover:bg-white/5 hover:text-white"
+                          className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition ${
+                            isActiveRoute(
+                              "/my-reviews"
+                            )
+                              ? "bg-red-600 text-white"
+                              : "text-gray-300 hover:bg-white/5 hover:text-white"
+                          }`}
                         >
                           <Star size={18} />
                           My Reviews
                         </Link>
+
+                        <Link
+                          href="/notifications"
+                          className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition ${
+                            isActiveRoute(
+                              "/notifications"
+                            )
+                              ? "bg-red-600 text-white"
+                              : "text-gray-300 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          <Bell size={18} />
+                          Notifications
+                        </Link>
+
+                        <Link
+                          href="/addresses"
+                          className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition ${
+                            isActiveRoute(
+                              "/addresses"
+                            )
+                              ? "bg-red-600 text-white"
+                              : "text-gray-300 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          <MapPin size={18} />
+                          Addresses
+                        </Link>
+
+                        <Link
+                          href="/settings"
+                          className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition ${
+                            isActiveRoute(
+                              "/settings"
+                            )
+                              ? "bg-red-600 text-white"
+                              : "text-gray-300 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          <Settings size={18} />
+                          Settings
+                        </Link>
+
+                        <div className="my-2 border-t border-white/10" />
 
                         <button
                           type="button"
@@ -415,7 +574,7 @@ export default function Navbar() {
                           disabled={
                             loggingOut
                           }
-                          className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-red-400 transition hover:bg-red-500/10 disabled:opacity-50"
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <LogOut
                             size={18}
@@ -432,9 +591,24 @@ export default function Navbar() {
               )}
             </>
           )}
+          <Link
+  href="/wishlist"
+  aria-label="Wishlist"
+  className="group relative rounded-full border border-white/10 bg-[#181818] p-3 text-white transition-all duration-300 hover:border-red-600 hover:bg-red-600"
+>
+  <Heart size={22} />
 
+  {wishlistCount > 0 && (
+    <span className="absolute -right-2 -top-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-bold text-white">
+      {wishlistCount > 99
+        ? "99+"
+        : wishlistCount}
+    </span>
+  )}
+</Link>
           <Link
             href="/cart"
+            aria-label="Open shopping cart"
             className="group relative rounded-full border border-white/10 bg-[#181818] p-3 text-white transition-all duration-300 hover:border-red-600 hover:bg-red-600"
           >
             <ShoppingCart
@@ -490,7 +664,7 @@ export default function Navbar() {
       >
         {links.map((link) => {
           const active =
-            pathname === link.href;
+            isActiveRoute(link.href);
 
           return (
             <Link
@@ -552,7 +726,13 @@ export default function Navbar() {
 
             <Link
               href="/account"
-              className="flex items-center gap-3 border-b border-white/10 px-6 py-4 font-bold text-white transition hover:bg-[#1E293B]"
+              className={`flex items-center gap-3 border-b border-white/10 px-6 py-4 font-bold transition ${
+                isActiveRoute(
+                  "/account"
+                )
+                  ? "bg-red-600 text-white"
+                  : "text-white hover:bg-[#1E293B]"
+              }`}
             >
               <UserCircle2
                 size={19}
@@ -562,17 +742,29 @@ export default function Navbar() {
 
             <Link
               href="/my-orders"
-              className="flex items-center gap-3 border-b border-white/10 px-6 py-4 font-bold text-white transition hover:bg-[#1E293B]"
+              className={`flex items-center gap-3 border-b border-white/10 px-6 py-4 font-bold transition ${
+                isActiveRoute(
+                  "/my-orders"
+                )
+                  ? "bg-red-600 text-white"
+                  : "text-white hover:bg-[#1E293B]"
+              }`}
             >
               <ShoppingBag
                 size={19}
               />
-              Order History
+              My Orders
             </Link>
 
             <Link
               href="/wishlist"
-              className="flex items-center gap-3 border-b border-white/10 px-6 py-4 font-bold text-white transition hover:bg-[#1E293B]"
+              className={`flex items-center gap-3 border-b border-white/10 px-6 py-4 font-bold transition ${
+                isActiveRoute(
+                  "/wishlist"
+                )
+                  ? "bg-red-600 text-white"
+                  : "text-white hover:bg-[#1E293B]"
+              }`}
             >
               <Heart size={19} />
               Wishlist
@@ -580,10 +772,58 @@ export default function Navbar() {
 
             <Link
               href="/my-reviews"
-              className="flex items-center gap-3 border-b border-white/10 px-6 py-4 font-bold text-white transition hover:bg-[#1E293B]"
+              className={`flex items-center gap-3 border-b border-white/10 px-6 py-4 font-bold transition ${
+                isActiveRoute(
+                  "/my-reviews"
+                )
+                  ? "bg-red-600 text-white"
+                  : "text-white hover:bg-[#1E293B]"
+              }`}
             >
               <Star size={19} />
               My Reviews
+            </Link>
+
+            <Link
+              href="/notifications"
+              className={`flex items-center gap-3 border-b border-white/10 px-6 py-4 font-bold transition ${
+                isActiveRoute(
+                  "/notifications"
+                )
+                  ? "bg-red-600 text-white"
+                  : "text-white hover:bg-[#1E293B]"
+              }`}
+            >
+              <Bell size={19} />
+              Notifications
+            </Link>
+
+            <Link
+              href="/addresses"
+              className={`flex items-center gap-3 border-b border-white/10 px-6 py-4 font-bold transition ${
+                isActiveRoute(
+                  "/addresses"
+                )
+                  ? "bg-red-600 text-white"
+                  : "text-white hover:bg-[#1E293B]"
+              }`}
+            >
+              <MapPin size={19} />
+              Addresses
+            </Link>
+
+            <Link
+              href="/settings"
+              className={`flex items-center gap-3 border-b border-white/10 px-6 py-4 font-bold transition ${
+                isActiveRoute(
+                  "/settings"
+                )
+                  ? "bg-red-600 text-white"
+                  : "text-white hover:bg-[#1E293B]"
+              }`}
+            >
+              <Settings size={19} />
+              Settings
             </Link>
 
             <button
@@ -592,7 +832,7 @@ export default function Navbar() {
                 void handleLogout()
               }
               disabled={loggingOut}
-              className="flex w-full items-center gap-3 px-6 py-4 text-left font-bold text-red-400 transition hover:bg-red-500/10 disabled:opacity-50"
+              className="flex w-full items-center gap-3 px-6 py-4 text-left font-bold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <LogOut size={19} />
 

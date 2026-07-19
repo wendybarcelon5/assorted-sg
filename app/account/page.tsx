@@ -1,224 +1,347 @@
 "use client";
 
 import { supabase } from "@/lib/supabase";
+import {
+  ArrowRight,
+  Heart,
+  Mail,
+  MapPin,
+  Package,
+  Settings,
+  ShieldCheck,
+  ShoppingBag,
+  Star,
+  UserCircle2,
+} from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Profile = {
   full_name: string | null;
   email: string | null;
   phone: string | null;
-  address: string | null;
 };
 
 export default function AccountPage() {
-  const router = useRouter();
+  const [profile, setProfile] =
+    useState<Profile | null>(null);
 
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loggingOut, setLoggingOut] = useState(false);
+  const [loading, setLoading] =
+    useState(true);
+
+  const [totalOrders, setTotalOrders] =
+    useState(0);
+
+  const [completedOrders, setCompletedOrders] =
+    useState(0);
 
   useEffect(() => {
-    async function loadAccount() {
-      try {
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+    loadAccount();
+  }, []);
 
-        if (userError || !user) {
-          router.replace("/login");
-          return;
-        }
+  async function loadAccount() {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-        const { data, error: profileError } = await supabase
+      if (!user) return;
+
+      const { data: profileData } =
+        await supabase
           .from("profiles")
-          .select("full_name, email, phone, address")
+          .select(
+            "full_name,email,phone"
+          )
           .eq("id", user.id)
           .maybeSingle();
 
-        if (profileError) {
-          console.error(
-            "Unable to load customer profile:",
-            profileError
-          );
-        }
+      setProfile(
+        profileData as Profile
+      );
 
-        setProfile({
-          full_name:
-            data?.full_name ??
-            user.user_metadata?.full_name ??
-            null,
-          email: data?.email ?? user.email ?? null,
-          phone:
-            data?.phone ??
-            user.user_metadata?.phone ??
-            null,
-          address:
-            data?.address ??
-            user.user_metadata?.address ??
-            null,
-        });
-      } catch (error) {
-        console.error("Account loading error:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
+      const { count: total } =
+        await supabase
+          .from("orders")
+          .select("*", {
+            count: "exact",
+            head: true,
+          })
+          .eq("user_id", user.id);
 
-    void loadAccount();
-  }, [router]);
+      const {
+        count: delivered,
+      } = await supabase
+        .from("orders")
+        .select("*", {
+          count: "exact",
+          head: true,
+        })
+        .eq("user_id", user.id)
+        .eq("status", "Delivered");
 
-  async function handleLogout() {
-    try {
-      setLoggingOut(true);
-
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        alert(error.message);
-        return;
-      }
-
-      router.push("/");
-      router.refresh();
-    } catch (error) {
-      console.error("Logout error:", error);
-      alert("Unable to log out.");
+      setTotalOrders(total ?? 0);
+      setCompletedOrders(
+        delivered ?? 0
+      );
     } finally {
-      setLoggingOut(false);
+      setLoading(false);
     }
   }
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-black text-white">
-        <p className="text-gray-400">
-          Loading your account...
-        </p>
+      <main className="min-h-screen flex items-center justify-center bg-black text-white">
+        Loading...
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-black px-4 py-12 text-white">
-      <div className="mx-auto max-w-5xl">
-        <div className="rounded-3xl border border-white/10 bg-[#111827] p-6 shadow-2xl sm:p-8">
-          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-[0.25em] text-red-500">
-                Assorted SG
-              </p>
+    <main className="min-h-screen bg-black text-white px-5 py-12">
+      <div className="max-w-7xl mx-auto">
 
-              <h1 className="mt-3 text-3xl font-black">
-                Welcome, {profile?.full_name || "Customer"}
+        <div className="rounded-3xl bg-gradient-to-br from-[#1E293B] via-[#111827] to-black border border-white/10 p-8 shadow-2xl">
+
+          <div className="flex flex-col md:flex-row md:items-center gap-6">
+
+            <div className="w-24 h-24 rounded-full bg-red-600 flex items-center justify-center">
+
+              <UserCircle2 size={60} />
+
+            </div>
+
+            <div>
+
+              <h1 className="text-4xl font-black">
+
+                {profile?.full_name ||
+                  "Customer"}
+
               </h1>
 
-              <p className="mt-2 text-gray-400">
-                Manage your orders, profile, and reviews.
+              <p className="mt-2 text-gray-400 flex items-center gap-2">
+
+                <Mail size={16} />
+
+                {profile?.email}
+
               </p>
+
+              <p className="mt-2 text-gray-400 flex items-center gap-2">
+
+                <ShieldCheck size={16} />
+
+                Verified Customer
+
+              </p>
+
             </div>
 
-            <button
-              type="button"
-              onClick={() => void handleLogout()}
-              disabled={loggingOut}
-              className="rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-3 font-bold text-red-400 transition hover:bg-red-500 hover:text-white disabled:opacity-50"
-            >
-              {loggingOut ? "Logging out..." : "Log Out"}
-            </button>
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <Link
-              href="/my-orders"
-              className="rounded-2xl border border-white/10 bg-black/20 p-5 transition hover:border-red-500 hover:bg-red-500/5"
-            >
-              <p className="text-xl font-black">
-                My Orders
-              </p>
+        </div>
 
-              <p className="mt-2 text-sm leading-6 text-gray-400">
-                View your purchases and order status.
-              </p>
-            </Link>
+        <div className="grid md:grid-cols-3 gap-6 mt-8">
 
-            <Link
-              href="/account/profile"
-              className="rounded-2xl border border-white/10 bg-black/20 p-5 transition hover:border-red-500 hover:bg-red-500/5"
-            >
-              <p className="text-xl font-black">
-                My Profile
-              </p>
+          <div className="rounded-2xl bg-[#111827] border border-white/10 p-6">
 
-              <p className="mt-2 text-sm leading-6 text-gray-400">
-                View and update your customer information.
-              </p>
-            </Link>
+            <p className="text-gray-400">
 
-            <Link
-              href="/my-reviews"
-              className="rounded-2xl border border-white/10 bg-black/20 p-5 transition hover:border-red-500 hover:bg-red-500/5"
-            >
-              <p className="text-xl font-black">
-                My Reviews
-              </p>
+              Total Orders
 
-              <p className="mt-2 text-sm leading-6 text-gray-400">
-                View reviews you have submitted.
-              </p>
-            </Link>
-          </div>
+            </p>
 
-          <section className="mt-8 rounded-2xl border border-white/10 bg-black/20 p-5">
-            <h2 className="text-xl font-black">
-              Account Information
+            <h2 className="text-4xl font-black mt-3">
+
+              {totalOrders}
+
             </h2>
 
-            <div className="mt-5 grid gap-5 sm:grid-cols-2">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                  Full name
-                </p>
+          </div>
 
-                <p className="mt-1 text-white">
-                  {profile?.full_name || "Not provided"}
-                </p>
-              </div>
+          <div className="rounded-2xl bg-[#111827] border border-white/10 p-6">
 
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                  Email
-                </p>
+            <p className="text-gray-400">
 
-                <p className="mt-1 text-white">
-                  {profile?.email || "Not provided"}
-                </p>
-              </div>
+              Completed Orders
 
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                  Phone
-                </p>
+            </p>
 
-                <p className="mt-1 text-white">
-                  {profile?.phone || "Not provided"}
-                </p>
-              </div>
+            <h2 className="text-4xl font-black mt-3">
 
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                  Delivery address
-                </p>
+              {completedOrders}
 
-                <p className="mt-1 text-white">
-                  {profile?.address || "Not provided"}
-                </p>
-              </div>
-            </div>
-          </section>
+            </h2>
+
+          </div>
+
+          <div className="rounded-2xl bg-[#111827] border border-white/10 p-6">
+
+            <p className="text-gray-400">
+
+              Wishlist
+
+            </p>
+
+            <h2 className="text-4xl font-black mt-3">
+
+              Soon
+
+            </h2>
+
+          </div>
+
         </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
+
+          <Link
+            href="/my-orders"
+            className="rounded-2xl border border-white/10 bg-[#111827] p-6 hover:border-red-600 transition"
+          >
+            <ShoppingBag
+              className="text-red-500"
+              size={32}
+            />
+
+            <h3 className="mt-5 text-xl font-black">
+
+              My Orders
+
+            </h3>
+
+            <p className="mt-2 text-gray-400">
+
+              View all purchases and order status.
+
+            </p>
+
+            <div className="mt-5 flex items-center gap-2 font-bold text-red-500">
+
+              Open
+
+              <ArrowRight size={18} />
+
+            </div>
+
+          </Link>
+
+          <Link
+            href="/wishlist"
+            className="rounded-2xl border border-white/10 bg-[#111827] p-6 hover:border-red-600 transition"
+          >
+            <Heart
+              className="text-red-500"
+              size={32}
+            />
+
+            <h3 className="mt-5 text-xl font-black">
+
+              Wishlist
+
+            </h3>
+
+            <p className="mt-2 text-gray-400">
+
+              Save your favorite products.
+
+            </p>
+
+          </Link>
+
+          <Link
+            href="/my-reviews"
+            className="rounded-2xl border border-white/10 bg-[#111827] p-6 hover:border-red-600 transition"
+          >
+            <Star
+              className="text-red-500"
+              size={32}
+            />
+
+            <h3 className="mt-5 text-xl font-black">
+
+              My Reviews
+
+            </h3>
+
+            <p className="mt-2 text-gray-400">
+
+              Manage all your product reviews.
+
+            </p>
+
+          </Link>
+
+          <Link
+            href="/addresses"
+            className="rounded-2xl border border-white/10 bg-[#111827] p-6 hover:border-red-600 transition"
+          >
+            <MapPin
+              className="text-red-500"
+              size={32}
+            />
+
+            <h3 className="mt-5 text-xl font-black">
+
+              Addresses
+
+            </h3>
+
+            <p className="mt-2 text-gray-400">
+
+              Manage delivery addresses.
+
+            </p>
+
+          </Link>
+
+          <Link
+            href="/settings"
+            className="rounded-2xl border border-white/10 bg-[#111827] p-6 hover:border-red-600 transition"
+          >
+            <Settings
+              className="text-red-500"
+              size={32}
+            />
+
+            <h3 className="mt-5 text-xl font-black">
+
+              Settings
+
+            </h3>
+
+            <p className="mt-2 text-gray-400">
+
+              Update account preferences.
+
+            </p>
+
+          </Link>
+
+          <div className="rounded-2xl border border-dashed border-white/20 bg-[#111827] p-6">
+
+            <Package
+              className="text-gray-500"
+              size={32}
+            />
+
+            <h3 className="mt-5 text-xl font-black">
+
+              More Features
+
+            </h3>
+
+            <p className="mt-2 text-gray-500">
+
+              Notifications, Coupons, Loyalty Points and more are coming soon.
+
+            </p>
+
+          </div>
+
+        </div>
+
       </div>
     </main>
   );

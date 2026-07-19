@@ -272,8 +272,8 @@ export default function CheckoutPage() {
         "Order placed successfully!"
       );
 
-      router.push("/");
-      router.refresh();
+      router.push("/my-orders");
+router.refresh();
     } catch (error) {
       console.error(
         "Checkout error:",
