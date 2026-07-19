@@ -4,7 +4,7 @@ import { useCart } from "@/app/context/CartContext";
 import { createNotification } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const paymentMethods = [
   {
@@ -56,6 +56,9 @@ export default function CheckoutPage() {
   const [placingOrder, setPlacingOrder] =
     useState(false);
 
+  const [checkingUser, setCheckingUser] =
+    useState(true);
+
   const requiresReceipt = [
     "GCash",
     "Maya",
@@ -74,6 +77,52 @@ export default function CheckoutPage() {
       sum + item.price * item.quantity,
     0
   );
+
+  useEffect(() => {
+    async function loadCustomer() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        alert(
+          "Please log in before checking out."
+        );
+
+        router.replace("/login");
+        return;
+      }
+
+      setEmail(user.email ?? "");
+
+      const { data: profile } =
+        await supabase
+          .from("profiles")
+          .select(
+            "full_name, phone, address"
+          )
+          .eq("id", user.id)
+          .maybeSingle();
+
+      if (profile) {
+        setName(
+          profile.full_name ?? ""
+        );
+
+        setPhone(
+          profile.phone ?? ""
+        );
+
+        setAddress(
+          profile.address ?? ""
+        );
+      }
+
+      setCheckingUser(false);
+    }
+
+    loadCustomer();
+  }, [router]);
 
   function handlePaymentMethodChange(
     method: string
@@ -100,11 +149,26 @@ export default function CheckoutPage() {
       alert(
         `Please upload your ${paymentMethod} proof of payment.`
       );
+
       return;
     }
 
     try {
       setPlacingOrder(true);
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        alert(
+          "Your session has expired. Please log in again."
+        );
+
+        router.replace("/login");
+        return;
+      }
 
       let receiptUrl = "";
 
@@ -115,7 +179,7 @@ export default function CheckoutPage() {
             "-"
           );
 
-        const fileName = `${Date.now()}-${safeReceiptName}`;
+        const fileName = `${user.id}/${Date.now()}-${safeReceiptName}`;
 
         const { error: uploadError } =
           await supabase.storage
@@ -136,6 +200,12 @@ export default function CheckoutPage() {
           publicUrlData.publicUrl;
       }
 
+      const paymentStatus =
+        paymentMethod ===
+        "Cash on Delivery"
+          ? "Pending"
+          : "For Verification";
+
       const {
         data: order,
         error: orderError,
@@ -143,12 +213,15 @@ export default function CheckoutPage() {
         .from("orders")
         .insert([
           {
+            user_id: user.id,
             customer_name: name,
             email,
             phone,
             address,
             payment_method:
               paymentMethod,
+            payment_status:
+              paymentStatus,
             receipt_url: receiptUrl,
             total,
             status: "Pending",
@@ -189,7 +262,7 @@ export default function CheckoutPage() {
         ).toLocaleString("en-PH", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
-        })} using ${paymentMethod}.`,
+        })} using ${paymentMethod}. Payment status: ${paymentStatus}.`,
         "order"
       );
 
@@ -199,7 +272,8 @@ export default function CheckoutPage() {
         "Order placed successfully!"
       );
 
-      router.push("/");
+      router.push("/my-orders");
+      router.refresh();
     } catch (error) {
       console.error(
         "Checkout error:",
@@ -212,6 +286,16 @@ export default function CheckoutPage() {
     } finally {
       setPlacingOrder(false);
     }
+  }
+
+  if (checkingUser) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-black px-4 text-white">
+        <p className="font-bold text-gray-300">
+          Preparing checkout...
+        </p>
+      </main>
+    );
   }
 
   return (
@@ -242,14 +326,8 @@ export default function CheckoutPage() {
             <input
               type="email"
               value={email}
-              onChange={(event) =>
-                setEmail(
-                  event.target.value
-                )
-              }
-              placeholder="Email"
-              required
-              className="w-full rounded-xl border border-white/10 bg-[#111827] px-4 py-3 outline-none transition focus:border-red-500"
+              readOnly
+              className="w-full cursor-not-allowed rounded-xl border border-white/10 bg-[#0b1220] px-4 py-3 text-gray-400 outline-none"
             />
 
             <input
@@ -429,6 +507,19 @@ export default function CheckoutPage() {
 
               <span className="font-bold text-white">
                 {paymentMethod}
+              </span>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-sm">
+              <span className="text-gray-500">
+                Initial payment status
+              </span>
+
+              <span className="font-bold text-yellow-400">
+                {paymentMethod ===
+                "Cash on Delivery"
+                  ? "Pending"
+                  : "For Verification"}
               </span>
             </div>
           </section>
