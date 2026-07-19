@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -21,8 +21,6 @@ type ExistingReview = {
 function ReviewPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = useMemo(() => createClient(), []);
-
   const orderId = searchParams.get("order");
   const productId = searchParams.get("product");
 
@@ -179,7 +177,7 @@ function ReviewPageContent() {
     }
 
     void loadReviewPage();
-  }, [orderId, productId, router, supabase]);
+  }, [orderId, productId, router]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
