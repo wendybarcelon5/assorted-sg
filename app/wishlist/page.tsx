@@ -175,13 +175,12 @@ export default function WishlistPage() {
     try {
       setMovingId(item.wishlistId);
 
-      addToCart({
-        id: product.id,
-        name: product.name,
-        price: Number(product.price),
-        image: product.image ?? "",
-        quantity: 1,
-      });
+     addToCart({
+  id: Number(product.id),
+  name: product.name,
+  price: Number(product.price),
+  image: product.image ?? "",
+});
 
       const { error } = await supabase
         .from("wishlist")
