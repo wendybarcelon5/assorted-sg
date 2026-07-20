@@ -1,4 +1,10 @@
 import DashboardStats from "@/components/admin/DashboardStats";
+import RevenueChart from "@/components/admin/RevenueChart";
+import OrdersChart from "@/components/admin/OrdersChart";
+import RecentOrders from "@/components/admin/RecentOrders";
+import RecentNotifications from "@/components/admin/RecentNotifications";
+import BestSellingProducts from "@/components/admin/BestSellingProducts";
+import LowStockProducts from "@/components/admin/LowStockProducts";
 
 export default function AdminDashboard() {
   return (
@@ -6,43 +12,60 @@ export default function AdminDashboard() {
 
       {/* Welcome */}
 
-      <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#1E293B] to-[#111827] p-6 shadow-xl transition-all duration-300 hover:-translate-y-2 hover:border-red-500 hover:shadow-red-600/20">
+      <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#1E293B] to-[#111827] p-8 shadow-xl">
 
-        <h1 className="text-4xl font-extrabold tracking-wide text-white md:text-5xl">
+        <p className="text-sm font-bold uppercase tracking-[0.3em] text-red-500">
           Dashboard
+        </p>
+
+        <h1 className="mt-3 text-4xl font-black text-white md:text-5xl">
+          Good Evening, Assorted SG 👋
         </h1>
 
-        <p className="mt-3 text-lg text-gray-200">
-          Welcome back,
-          <span className="font-bold text-[#D4AF37]">
-            {" "}Assorted SG
-          </span>
-          👋
+        <p className="mt-3 max-w-3xl text-gray-300">
+          Welcome back. Here's a quick overview of your store's
+          performance, recent orders, inventory, and customer activity.
         </p>
 
-       <p className="text-base font-semibold uppercase tracking-wider text-gray-300">
-          Here's what's happening with your store today.
-        </p>
-
-      </div>
+      </section>
 
       {/* Statistics */}
 
       <DashboardStats />
 
-            {/* Recent Orders */}
+      {/* Charts */}
 
-      <div className="rounded-3xl border border-white/10 bg-[#1E293B] p-8 shadow-xl">
+      <section className="grid gap-6 xl:grid-cols-3">
 
-        <h2 className="mt-2 text-4xl font-extrabold text-white">
-          Recent Orders
-        </h2>
+        <div className="xl:col-span-2">
+          <RevenueChart />
+        </div>
 
-        <p className="mt-3 text-gray-300">
-          Customer orders will appear here.
-        </p>
+        <div>
+          <OrdersChart />
+        </div>
 
-      </div>
+      </section>
+
+      {/* Orders + Notifications */}
+
+      <section className="grid gap-6 xl:grid-cols-2">
+
+        <RecentOrders />
+
+        <RecentNotifications />
+
+      </section>
+
+      {/* Products */}
+
+      <section className="grid gap-6 xl:grid-cols-2">
+
+        <BestSellingProducts />
+
+        <LowStockProducts />
+
+      </section>
 
     </main>
   );
