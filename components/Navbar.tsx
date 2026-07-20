@@ -544,20 +544,6 @@ export default function Navbar() {
                         </Link>
 
                         <Link
-                          href="/notifications"
-                          className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition ${
-                            isActiveRoute(
-                              "/notifications"
-                            )
-                              ? "bg-red-600 text-white"
-                              : "text-gray-300 hover:bg-white/5 hover:text-white"
-                          }`}
-                        >
-                          <Bell size={18} />
-                          Notifications
-                        </Link>
-
-                        <Link
                           href="/addresses"
                           className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition ${
                             isActiveRoute(
@@ -816,20 +802,6 @@ export default function Navbar() {
             >
               <Star size={19} />
               My Reviews
-            </Link>
-
-            <Link
-              href="/notifications"
-              className={`flex items-center gap-3 border-b border-white/10 px-6 py-4 font-bold transition ${
-                isActiveRoute(
-                  "/notifications"
-                )
-                  ? "bg-red-600 text-white"
-                  : "text-white hover:bg-[#1E293B]"
-              }`}
-            >
-              <Bell size={19} />
-              Notifications
             </Link>
 
             <Link
