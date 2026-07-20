@@ -3,8 +3,27 @@
 import { useCart } from "@/app/context/CartContext";
 import { createNotification } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
+import {
+  CheckCircle2,
+  ChevronDown,
+  MapPin,
+  Plus,
+} from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
+type SavedAddress = {
+  id: string;
+  user_id: string;
+  full_name: string;
+  phone: string;
+  address_line: string;
+  city: string;
+  province: string;
+  postal_code: string;
+  is_default: boolean;
+};
 
 const paymentMethods = [
   {
@@ -38,6 +57,16 @@ const paymentMethods = [
   },
 ];
 
+function formatAddress(savedAddress: SavedAddress) {
+  return [
+    savedAddress.address_line,
+    `${savedAddress.city}, ${savedAddress.province}`,
+    savedAddress.postal_code,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export default function CheckoutPage() {
   const { cart, clearCart } = useCart();
   const router = useRouter();
@@ -46,6 +75,16 @@ export default function CheckoutPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+
+  const [savedAddresses, setSavedAddresses] = useState<
+    SavedAddress[]
+  >([]);
+
+  const [selectedAddressId, setSelectedAddressId] =
+    useState("");
+
+  const [showAddressOptions, setShowAddressOptions] =
+    useState(false);
 
   const [paymentMethod, setPaymentMethod] =
     useState("Cash on Delivery");
@@ -68,9 +107,13 @@ export default function CheckoutPage() {
 
   const selectedPaymentMethod =
     paymentMethods.find(
-      (method) =>
-        method.name === paymentMethod
+      (method) => method.name === paymentMethod
     ) ?? paymentMethods[0];
+
+  const selectedSavedAddress =
+    savedAddresses.find(
+      (item) => item.id === selectedAddressId
+    ) ?? null;
 
   const total = cart.reduce(
     (sum, item) =>
@@ -80,49 +123,141 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     async function loadCustomer() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        setCheckingUser(true);
 
-      if (!user) {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          alert(
+            "Please log in before checking out."
+          );
+
+          router.replace(
+            "/login?redirect=/checkout"
+          );
+
+          return;
+        }
+
+        setEmail(user.email ?? "");
+
+        const [
+          profileResult,
+          addressesResult,
+        ] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("full_name,phone")
+            .eq("id", user.id)
+            .maybeSingle(),
+
+          supabase
+            .from("addresses")
+            .select(
+              "id,user_id,full_name,phone,address_line,city,province,postal_code,is_default"
+            )
+            .eq("user_id", user.id)
+            .order("is_default", {
+              ascending: false,
+            })
+            .order("created_at", {
+              ascending: false,
+            }),
+        ]);
+
+        if (profileResult.error) {
+          console.error(
+            "Profile loading error:",
+            profileResult.error
+          );
+        }
+
+        if (addressesResult.error) {
+          console.error(
+            "Address loading error:",
+            addressesResult.error
+          );
+        }
+
+        const profile =
+          profileResult.data;
+
+        const addresses =
+          (addressesResult.data ??
+            []) as SavedAddress[];
+
+        setSavedAddresses(addresses);
+
+        const defaultAddress =
+          addresses.find(
+            (item) => item.is_default
+          ) ??
+          addresses[0] ??
+          null;
+
+        if (defaultAddress) {
+          setSelectedAddressId(
+            defaultAddress.id
+          );
+
+          setName(
+            defaultAddress.full_name ||
+              profile?.full_name ||
+              ""
+          );
+
+          setPhone(
+            defaultAddress.phone ||
+              profile?.phone ||
+              ""
+          );
+
+          setAddress(
+            formatAddress(defaultAddress)
+          );
+        } else {
+          setName(
+            profile?.full_name ??
+              user.user_metadata?.full_name ??
+              ""
+          );
+
+          setPhone(
+            profile?.phone ?? ""
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Checkout loading error:",
+          error
+        );
+
         alert(
-          "Please log in before checking out."
+          "Unable to prepare checkout. Please refresh the page."
         );
-
-        router.replace("/login");
-        return;
+      } finally {
+        setCheckingUser(false);
       }
-
-      setEmail(user.email ?? "");
-
-      const { data: profile } =
-        await supabase
-          .from("profiles")
-          .select(
-            "full_name, phone, address"
-          )
-          .eq("id", user.id)
-          .maybeSingle();
-
-      if (profile) {
-        setName(
-          profile.full_name ?? ""
-        );
-
-        setPhone(
-          profile.phone ?? ""
-        );
-
-        setAddress(
-          profile.address ?? ""
-        );
-      }
-
-      setCheckingUser(false);
     }
 
-    loadCustomer();
+    void loadCustomer();
   }, [router]);
+
+  function selectSavedAddress(
+    savedAddress: SavedAddress
+  ) {
+    setSelectedAddressId(savedAddress.id);
+    setName(savedAddress.full_name);
+    setPhone(savedAddress.phone);
+    setAddress(
+      formatAddress(savedAddress)
+    );
+    setShowAddressOptions(false);
+  }
 
   function handlePaymentMethodChange(
     method: string
@@ -132,7 +267,7 @@ export default function CheckoutPage() {
   }
 
   async function handleCheckout(
-    event: React.FormEvent
+    event: React.FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
@@ -142,6 +277,36 @@ export default function CheckoutPage() {
 
     if (cart.length === 0) {
       alert("Your cart is empty.");
+      return;
+    }
+
+    if (!name.trim()) {
+      alert(
+        "Please enter the recipient's full name."
+      );
+      return;
+    }
+
+    if (!phone.trim()) {
+      alert(
+        "Please enter a phone number."
+      );
+      return;
+    }
+
+    if (
+      phone.replace(/\D/g, "").length < 10
+    ) {
+      alert(
+        "Please enter a valid phone number."
+      );
+      return;
+    }
+
+    if (!address.trim()) {
+      alert(
+        "Please enter a delivery address."
+      );
       return;
     }
 
@@ -166,7 +331,10 @@ export default function CheckoutPage() {
           "Your session has expired. Please log in again."
         );
 
-        router.replace("/login");
+        router.replace(
+          "/login?redirect=/checkout"
+        );
+
         return;
       }
 
@@ -214,10 +382,10 @@ export default function CheckoutPage() {
         .insert([
           {
             user_id: user.id,
-            customer_name: name,
-            email,
-            phone,
-            address,
+            customer_name: name.trim(),
+            email: email.trim(),
+            phone: phone.trim(),
+            address: address.trim(),
             payment_method:
               paymentMethod,
             payment_status:
@@ -257,7 +425,9 @@ export default function CheckoutPage() {
 
       await createNotification(
         "New Order",
-        `${name} placed order #${order.id} worth ₱${Number(
+        `${name.trim()} placed order #${
+          order.id
+        } worth ₱${Number(
           total
         ).toLocaleString("en-PH", {
           minimumFractionDigits: 2,
@@ -273,7 +443,7 @@ export default function CheckoutPage() {
       );
 
       router.push("/my-orders");
-router.refresh();
+      router.refresh();
     } catch (error) {
       console.error(
         "Checkout error:",
@@ -309,18 +479,222 @@ router.refresh();
           onSubmit={handleCheckout}
           className="mt-8 space-y-6"
         >
-          <div className="space-y-4">
+          <section className="rounded-2xl border border-white/10 bg-[#111827] p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <MapPin
+                    size={22}
+                    className="text-red-500"
+                  />
+
+                  <h2 className="text-lg font-black">
+                    Shipping Address
+                  </h2>
+                </div>
+
+                <p className="mt-1 text-sm text-gray-400">
+                  Choose where your order
+                  should be delivered.
+                </p>
+              </div>
+
+              {savedAddresses.length >
+                0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowAddressOptions(
+                      (current) =>
+                        !current
+                    )
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 px-4 py-3 font-bold transition hover:border-red-500 hover:text-red-400"
+                >
+                  Change Address
+                  <ChevronDown
+                    size={18}
+                    className={`transition ${
+                      showAddressOptions
+                        ? "rotate-180"
+                        : ""
+                    }`}
+                  />
+                </button>
+              )}
+            </div>
+
+            {savedAddresses.length ===
+            0 ? (
+              <div className="mt-5 rounded-xl border border-dashed border-white/20 bg-black/20 p-5">
+                <p className="font-bold text-white">
+                  No saved address found
+                </p>
+
+                <p className="mt-1 text-sm leading-6 text-gray-400">
+                  Enter your delivery
+                  information below or add a
+                  saved address first.
+                </p>
+
+                <Link
+                  href="/addresses"
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-3 font-bold transition hover:bg-red-500"
+                >
+                  <Plus size={18} />
+                  Add Saved Address
+                </Link>
+              </div>
+            ) : (
+              selectedSavedAddress && (
+                <div className="mt-5 rounded-xl border border-red-500/40 bg-red-500/5 p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-lg font-black text-white">
+                          {
+                            selectedSavedAddress.full_name
+                          }
+                        </p>
+
+                        {selectedSavedAddress.is_default && (
+                          <span className="rounded-full bg-red-600 px-3 py-1 text-xs font-black uppercase tracking-wide text-white">
+                            Default
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="mt-3 text-gray-300">
+                        {
+                          selectedSavedAddress.phone
+                        }
+                      </p>
+
+                      <div className="mt-2 whitespace-pre-line leading-7 text-gray-400">
+                        {formatAddress(
+                          selectedSavedAddress
+                        )}
+                      </div>
+                    </div>
+
+                    <CheckCircle2
+                      size={24}
+                      className="shrink-0 text-red-500"
+                    />
+                  </div>
+                </div>
+              )
+            )}
+
+            {showAddressOptions &&
+              savedAddresses.length > 0 && (
+                <div className="mt-5 space-y-3 border-t border-white/10 pt-5">
+                  <p className="font-black text-white">
+                    Choose a saved address
+                  </p>
+
+                  {savedAddresses.map(
+                    (savedAddress) => {
+                      const isSelected =
+                        selectedAddressId ===
+                        savedAddress.id;
+
+                      return (
+                        <button
+                          key={
+                            savedAddress.id
+                          }
+                          type="button"
+                          onClick={() =>
+                            selectSavedAddress(
+                              savedAddress
+                            )
+                          }
+                          className={`w-full rounded-xl border p-4 text-left transition ${
+                            isSelected
+                              ? "border-red-500 bg-red-500/10"
+                              : "border-white/10 bg-black/20 hover:border-white/30"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-black text-white">
+                                  {
+                                    savedAddress.full_name
+                                  }
+                                </p>
+
+                                {savedAddress.is_default && (
+                                  <span className="rounded-full bg-red-600 px-2 py-1 text-[10px] font-black uppercase text-white">
+                                    Default
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="mt-2 text-sm text-gray-400">
+                                {
+                                  savedAddress.phone
+                                }
+                              </p>
+
+                              <p className="mt-1 whitespace-pre-line text-sm leading-6 text-gray-400">
+                                {formatAddress(
+                                  savedAddress
+                                )}
+                              </p>
+                            </div>
+
+                            <span
+                              className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                                isSelected
+                                  ? "border-red-500 bg-red-500"
+                                  : "border-gray-600"
+                              }`}
+                            >
+                              {isSelected && (
+                                <span className="h-2 w-2 rounded-full bg-white" />
+                              )}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    }
+                  )}
+
+                  <Link
+                    href="/addresses"
+                    className="inline-flex items-center gap-2 font-bold text-red-500 transition hover:text-red-400"
+                  >
+                    <Plus size={17} />
+                    Manage Addresses
+                  </Link>
+                </div>
+              )}
+          </section>
+
+          <section className="space-y-4 rounded-2xl border border-white/10 bg-[#111827] p-5">
+            <div>
+              <h2 className="text-lg font-black">
+                Recipient Information
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-400">
+                You can still adjust these
+                details for this order.
+              </p>
+            </div>
+
             <input
               type="text"
               value={name}
               onChange={(event) =>
-                setName(
-                  event.target.value
-                )
+                setName(event.target.value)
               }
               placeholder="Full name"
               required
-              className="w-full rounded-xl border border-white/10 bg-[#111827] px-4 py-3 outline-none transition focus:border-red-500"
+              autoComplete="name"
+              className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 outline-none transition focus:border-red-500"
             />
 
             <input
@@ -334,13 +708,12 @@ router.refresh();
               type="tel"
               value={phone}
               onChange={(event) =>
-                setPhone(
-                  event.target.value
-                )
+                setPhone(event.target.value)
               }
               placeholder="Phone number"
               required
-              className="w-full rounded-xl border border-white/10 bg-[#111827] px-4 py-3 outline-none transition focus:border-red-500"
+              autoComplete="tel"
+              className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 outline-none transition focus:border-red-500"
             />
 
             <textarea
@@ -353,9 +726,10 @@ router.refresh();
               placeholder="Delivery address"
               required
               rows={4}
-              className="w-full resize-none rounded-xl border border-white/10 bg-[#111827] px-4 py-3 outline-none transition focus:border-red-500"
+              autoComplete="street-address"
+              className="w-full resize-none rounded-xl border border-white/10 bg-black/20 px-4 py-3 outline-none transition focus:border-red-500"
             />
-          </div>
+          </section>
 
           <section className="rounded-2xl border border-white/10 bg-[#111827] p-5">
             <div>
@@ -441,8 +815,7 @@ router.refresh();
                     htmlFor="payment-receipt"
                     className="mb-2 block text-sm font-bold text-gray-300"
                   >
-                    Upload proof of
-                    payment
+                    Upload proof of payment
                   </label>
 
                   <input
