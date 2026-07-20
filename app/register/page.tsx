@@ -18,84 +18,78 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   async function handleRegister(
-    event: React.FormEvent<HTMLFormElement>
-  ) {
-    event.preventDefault();
+  event: React.FormEvent<HTMLFormElement>
+) {
+  event.preventDefault();
 
-    if (loading) {
-      return;
-    }
+  if (loading) return;
 
-    if (password.length < 6) {
-      alert(
-        "Password must be at least 6 characters."
-      );
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      alert("Passwords do not match.");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const { data, error } =
-        await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            emailRedirectTo:
-              "https://assortedsg.vercel.app/login",
-            data: {
-              full_name: fullName.trim(),
-              phone: phone.trim(),
-              address: address.trim(),
-            },
-          },
-        });
-
-      if (error) {
-        alert(error.message);
-        return;
-      }
-
-      if (!data.user) {
-        alert(
-          "Unable to create your account."
-        );
-        return;
-      }
-
-      if (data.session) {
-        alert(
-          "Account created successfully!"
-        );
-
-        router.push("/");
-        router.refresh();
-        return;
-      }
-
-      alert(
-        "Account created successfully. Please check your email and confirm your account before logging in."
-      );
-
-      router.push("/login");
-    } catch (error) {
-      console.error(
-        "Registration error:",
-        error
-      );
-
-      alert(
-        "Something went wrong while creating your account."
-      );
-    } finally {
-      setLoading(false);
-    }
+  if (password.length < 6) {
+    alert("Password must be at least 6 characters.");
+    return;
   }
+
+  if (password !== confirmPassword) {
+    alert("Passwords do not match.");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: {
+        data: {
+          full_name: fullName.trim(),
+        },
+      },
+    });
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    if (!data.user) {
+      alert("Unable to create your account.");
+      return;
+    }
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          id: data.user.id,
+          full_name: fullName.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.trim(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "id",
+        }
+      );
+
+    if (profileError) {
+      console.error(profileError);
+      alert("Your account was created but your profile could not be saved.");
+      return;
+    }
+
+    alert("Account created successfully!");
+
+    router.push("/");
+    router.refresh();
+  } catch (error) {
+    console.error("Registration error:", error);
+
+    alert("Something went wrong while creating your account.");
+  } finally {
+    setLoading(false);
+  }
+}
 
   return (
     <main className="min-h-screen bg-black px-4 py-12 text-white">

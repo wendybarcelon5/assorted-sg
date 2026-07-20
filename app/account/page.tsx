@@ -39,55 +39,59 @@ export default function AccountPage() {
     loadAccount();
   }, []);
 
-  async function loadAccount() {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+ async function loadAccount() {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-      if (!user) return;
+    if (!user) return;
 
-      const { data: profileData } =
-        await supabase
-          .from("profiles")
-          .select(
-            "full_name,email,phone"
-          )
-          .eq("id", user.id)
-          .maybeSingle();
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("full_name,email,phone")
+      .eq("id", user.id)
+      .maybeSingle();
 
-      setProfile(
-        profileData as Profile
-      );
+    setProfile({
+  full_name:
+    profileData?.full_name ??
+    (user.user_metadata?.full_name as string) ??
+    null,
 
-      const { count: total } =
-        await supabase
-          .from("orders")
-          .select("*", {
-            count: "exact",
-            head: true,
-          })
-          .eq("user_id", user.id);
+  email:
+    profileData?.email ??
+    user.email ??
+    null,
 
-      const {
-        count: delivered,
-      } = await supabase
-        .from("orders")
-        .select("*", {
-          count: "exact",
-          head: true,
-        })
-        .eq("user_id", user.id)
-        .eq("status", "Delivered");
+  phone:
+    profileData?.phone ??
+    null,
+});
 
-      setTotalOrders(total ?? 0);
-      setCompletedOrders(
-        delivered ?? 0
-      );
-    } finally {
-      setLoading(false);
-    }
+    const { count: total } = await supabase
+      .from("orders")
+      .select("*", {
+        count: "exact",
+        head: true,
+      })
+      .eq("user_id", user.id);
+
+    const { count: delivered } = await supabase
+      .from("orders")
+      .select("*", {
+        count: "exact",
+        head: true,
+      })
+      .eq("user_id", user.id)
+      .eq("status", "Delivered");
+
+    setTotalOrders(total ?? 0);
+    setCompletedOrders(delivered ?? 0);
+  } finally {
+    setLoading(false);
   }
+}
 
   if (loading) {
     return (
@@ -112,21 +116,16 @@ export default function AccountPage() {
             </div>
 
             <div>
-
-              <h1 className="text-4xl font-black">
-  {profile?.full_name?.trim()
-    ? profile.full_name
-    : profile?.email?.split("@")[0] ??
-      "Customer"}
+<h1 className="text-4xl font-black">
+  {profile?.full_name ||
+    profile?.email?.split("@")[0] ||
+    "Customer"}
 </h1>
 
-              <p className="mt-2 text-gray-400 flex items-center gap-2">
-
-                <Mail size={16} />
-
-                {profile?.email}
-
-              </p>
+             <p className="mt-2 text-gray-400 flex items-center gap-2">
+  <Mail size={16} />
+  {profile?.email || "No email available"}
+</p>
 
               <p className="mt-2 text-gray-400 flex items-center gap-2">
 
@@ -135,6 +134,14 @@ export default function AccountPage() {
                 Verified Customer
 
               </p>
+              
+
+            <Link
+  href="/profile"
+  className="mt-5 inline-flex items-center rounded-xl bg-red-600 px-5 py-3 font-bold text-white transition hover:bg-red-700"
+>
+  Edit Profile
+</Link>
 
             </div>
 
