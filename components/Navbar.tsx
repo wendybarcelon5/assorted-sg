@@ -78,6 +78,9 @@ export default function Navbar() {
   const [wishlistCount, setWishlistCount] =
     useState(0);
 
+  const [notificationCount, setNotificationCount] =
+  useState(0);
+
   const accountMenuRef =
     useRef<HTMLDivElement | null>(null);
 
@@ -127,12 +130,14 @@ export default function Navbar() {
 
         if (currentUser) {
           await Promise.all([
-            loadProfile(currentUser.id),
-            loadWishlistCount(currentUser.id),
-          ]);
+  loadProfile(currentUser.id),
+  loadWishlistCount(currentUser.id),
+  loadNotificationCount(currentUser.id),
+]);
         } else {
           setProfile(null);
           setWishlistCount(0);
+          setNotificationCount(0);
         }
       } catch (error) {
         console.error(
@@ -248,6 +253,52 @@ export default function Navbar() {
 
     setWishlistCount(count ?? 0);
   }
+  useEffect(() => {
+  if (!user) return;
+
+  const channel = supabase
+    .channel(`notifications-navbar-${user.id}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${user.id}`,
+      },
+      () => {
+        void loadNotificationCount(user.id);
+      }
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}, [user]);
+
+  async function loadNotificationCount(
+  userId: string
+) {
+  const { count, error } = await supabase
+    .from("notifications")
+    .select("*", {
+      count: "exact",
+      head: true,
+    })
+    .eq("user_id", userId)
+    .eq("is_read", false);
+
+  if (error) {
+    console.error(
+      "Unable to load notification count:",
+      error
+    );
+    return;
+  }
+
+  setNotificationCount(count ?? 0);
+}
 
   async function loadProfile(
     userId: string
@@ -493,6 +544,22 @@ export default function Navbar() {
                           />
                           My Orders
                         </Link>
+                        
+                          <Link
+  href="/notifications"
+  aria-label="Notifications"
+  className="group relative rounded-full border border-white/10 bg-[#181818] p-3 text-white transition-all duration-300 hover:border-red-600 hover:bg-red-600"
+>
+  <Bell size={22} />
+
+  {notificationCount > 0 && (
+    <span className="absolute -right-2 -top-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-bold text-white">
+      {notificationCount > 99
+        ? "99+"
+        : notificationCount}
+    </span>
+  )}
+</Link>
 
                         <Link
                           href="/wishlist"
