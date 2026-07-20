@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Star } from "lucide-react";
 
 type Product = {
   id: number;
@@ -52,6 +53,10 @@ export default function ProductCard({
 
   const [message, setMessage] =
     useState("");
+  
+  const [averageRating, setAverageRating] = useState(0);
+
+  const [reviewCount, setReviewCount] = useState(0);
 
   useEffect(() => {
     void loadWishlistStatus();
@@ -94,6 +99,38 @@ export default function ProductCard({
       setWishlistLoading(false);
     }
   }
+
+  useEffect(() => {
+  async function loadRating() {
+    const { data, error } = await supabase
+      .from("reviews")
+      .select("rating")
+      .eq("product_id", product.id);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    const reviews = data ?? [];
+
+    setReviewCount(reviews.length);
+
+    if (reviews.length === 0) {
+      setAverageRating(0);
+      return;
+    }
+
+    const total = reviews.reduce(
+      (sum, review) => sum + review.rating,
+      0
+    );
+
+    setAverageRating(total / reviews.length);
+  }
+
+  loadRating();
+}, [product.id]);
 
   async function toggleWishlist() {
     if (
@@ -330,25 +367,52 @@ export default function ProductCard({
             ● Out of Stock
           </p>
         )}
-
-        {/* Price */}
-
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-3xl font-black text-red-500">
-            ₱{" "}
-            {Number(
-              product.price
-            ).toLocaleString("en-PH", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </p>
-
-          <div className="rounded-full border border-[#D4AF37] px-3 py-1 text-xs font-bold uppercase text-[#D4AF37]">
-            Premium
-          </div>
         </div>
-      </div>
+
+       {/* Price */}
+
+<div className="flex items-center justify-between gap-4">
+  <p className="text-3xl font-black text-red-500">
+    ₱{" "}
+    {Number(product.price).toLocaleString("en-PH", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}
+  </p>
+
+  <div className="rounded-full border border-[#D4AF37] px-3 py-1 text-xs font-bold uppercase text-[#D4AF37]">
+    Premium
+  </div>
+</div>
+
+{/* Rating */}
+
+<div className="flex items-center gap-2">
+  <div className="flex gap-1">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <Star
+        key={star}
+        size={14}
+        fill={
+          star <= Math.round(averageRating)
+            ? "currentColor"
+            : "none"
+        }
+        className={
+          star <= Math.round(averageRating)
+            ? "text-[#D4AF37]"
+            : "text-gray-600"
+        }
+      />
+    ))}
+  </div>
+
+  <span className="text-sm text-gray-400">
+    {reviewCount > 0
+      ? `${averageRating.toFixed(1)} (${reviewCount})`
+      : "No reviews"}
+  </span>
+</div>
 
       {/* Buttons */}
 
