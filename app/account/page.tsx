@@ -114,11 +114,11 @@ export default function AccountPage() {
             <div>
 
               <h1 className="text-4xl font-black">
-
-                {profile?.full_name ||
-                  "Customer"}
-
-              </h1>
+  {profile?.full_name?.trim()
+    ? profile.full_name
+    : profile?.email?.split("@")[0] ??
+      "Customer"}
+</h1>
 
               <p className="mt-2 text-gray-400 flex items-center gap-2">
 
