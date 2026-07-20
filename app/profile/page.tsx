@@ -358,13 +358,6 @@ export default function ProfilePage() {
               </button>
 
               <Link
-  href="/profile"
-  className="mt-5 inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-3 font-bold text-white transition hover:bg-red-700"
->
-  Edit Profile
-</Link>
-
-              <Link
                 href="/account"
                 className="inline-flex items-center justify-center rounded-2xl border border-white/15 px-6 py-4 font-black uppercase tracking-wide text-white transition hover:border-white/40 hover:bg-white/5"
               >
