@@ -14,40 +14,24 @@ export default async function AdminLayout({
 
   const {
     data: { user },
-    error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError || !user) {
+  if (!user) {
     redirect("/login?redirect=/admin");
   }
 
-  const {
-    data: profile,
-    error: profileError,
-  } = await supabase
+  const { data: profile } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profileError) {
-    console.error(
-      "Admin profile lookup failed:",
-      profileError
-    );
-
-    redirect("/login?error=profile-access");
-  }
-
-  const normalizedRole =
+  const role =
     typeof profile?.role === "string"
       ? profile.role.trim().toLowerCase()
       : "";
 
-  if (
-    normalizedRole !== "admin" &&
-    normalizedRole !== "administrator"
-  ) {
+  if (role !== "admin") {
     redirect("/");
   }
 
