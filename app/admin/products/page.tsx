@@ -8,7 +8,12 @@ import {
   PackageX,
   Search,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import { supabase } from "@/lib/supabase";
 
@@ -22,7 +27,12 @@ type Product = {
   created_at: string;
 };
 
-type CategoryFilter = "All" | string;
+type SortOption =
+  | "newest"
+  | "oldest"
+  | "priceLow"
+  | "priceHigh"
+  | "stock";
 
 function formatCurrency(value: number | string) {
   return new Intl.NumberFormat("en-PH", {
@@ -30,13 +40,31 @@ function formatCurrency(value: number | string) {
     currency: "PHP",
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(Number(value ?? 0));
+  }).format(Number(value || 0));
+}
+
+function formatDate(value: string) {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return date.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function getStockBadge(stockValue: number | string) {
-  const stock = Number(stockValue ?? 0);
+  const stock = Number(stockValue || 0);
 
-  if (stock === 0) {
+  if (stock <= 0) {
     return {
       label: "Out of Stock",
       className:
@@ -46,14 +74,14 @@ function getStockBadge(stockValue: number | string) {
 
   if (stock <= 5) {
     return {
-      label: `${stock} left`,
+      label: `Low Stock: ${stock}`,
       className:
         "border-yellow-500/30 bg-yellow-500/10 text-yellow-400",
     };
   }
 
   return {
-    label: `${stock} in stock`,
+    label: `In Stock: ${stock}`,
     className:
       "border-green-500/30 bg-green-500/10 text-green-400",
   };
@@ -63,102 +91,94 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] =
-    useState<CategoryFilter>("All");
+    useState("All");
+  const [sortBy, setSortBy] =
+    useState<SortOption>("newest");
 
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<number | null>(
-    null
-  );
+  const [deletingId, setDeletingId] = useState<
+    number | null
+  >(null);
   const [errorMessage, setErrorMessage] = useState("");
 
   const fetchProducts = useCallback(async () => {
-    try {
-      setErrorMessage("");
+    setLoading(true);
+    setErrorMessage("");
 
-      const { data, error } = await supabase
-        .from("products")
-        .select(
-          `
-            id,
-            name,
-            category,
-            price,
-            stock,
-            image,
-            created_at
-          `
-        )
-        .order("created_at", {
-          ascending: false,
-        });
+    const { data, error } = await supabase
+      .from("products")
+      .select(
+        "id, name, category, price, stock, image, created_at"
+      )
+      .order("created_at", {
+        ascending: false,
+      });
 
-      if (error) {
-        throw error;
-      }
-
-      setProducts((data ?? []) as Product[]);
-    } catch (error) {
+    if (error) {
       console.error("Unable to load products:", error);
-
-      setErrorMessage("Unable to load products.");
-    } finally {
+      setErrorMessage(
+        `Unable to load products: ${error.message}`
+      );
+      setProducts([]);
       setLoading(false);
+      return;
     }
+
+    setProducts((data || []) as Product[]);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
     void fetchProducts();
   }, [fetchProducts]);
 
-  async function deleteProduct(id: number) {
+  async function deleteProduct(product: Product) {
     const confirmed = window.confirm(
-      "Are you sure you want to delete this product? This action cannot be undone."
+      `Are you sure you want to delete "${product.name}"? This action cannot be undone.`
     );
 
     if (!confirmed) {
       return;
     }
 
-    try {
-      setDeletingId(id);
+    setDeletingId(product.id);
 
-      const { error } = await supabase
-        .from("products")
-        .delete()
-        .eq("id", id);
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", product.id);
 
-      if (error) {
-        throw error;
-      }
-
-      setProducts((currentProducts) =>
-        currentProducts.filter((product) => product.id !== id)
-      );
-    } catch (error) {
+    if (error) {
       console.error("Unable to delete product:", error);
-
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Unable to delete product.";
-
-      window.alert(message);
-    } finally {
+      window.alert(
+        `Unable to delete product: ${error.message}`
+      );
       setDeletingId(null);
+      return;
     }
+
+    setProducts((currentProducts) =>
+      currentProducts.filter(
+        (currentProduct) =>
+          currentProduct.id !== product.id
+      )
+    );
+
+    setDeletingId(null);
   }
 
   const categories = useMemo(() => {
-    const uniqueCategories = new Set(
-      products
-        .map((product) => product.category?.trim())
-        .filter(
-          (category): category is string =>
-            Boolean(category)
-        )
-    );
+    const categorySet = new Set<string>();
 
-    return ["All", ...Array.from(uniqueCategories).sort()];
+    products.forEach((product) => {
+      const category = product.category?.trim();
+
+      if (category) {
+        categorySet.add(category);
+      }
+    });
+
+    return ["All", ...Array.from(categorySet).sort()];
   }, [products]);
 
   const filteredProducts = useMemo(() => {
@@ -166,15 +186,16 @@ export default function ProductsPage() {
       .trim()
       .toLowerCase();
 
-    return products.filter((product) => {
+    const filtered = products.filter((product) => {
+      const productName = product.name.toLowerCase();
+      const productCategory = (
+        product.category || ""
+      ).toLowerCase();
+
       const matchesSearch =
-        normalizedSearch.length === 0 ||
-        product.name
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        (product.category ?? "")
-          .toLowerCase()
-          .includes(normalizedSearch);
+        normalizedSearch === "" ||
+        productName.includes(normalizedSearch) ||
+        productCategory.includes(normalizedSearch);
 
       const matchesCategory =
         selectedCategory === "All" ||
@@ -182,7 +203,44 @@ export default function ProductsPage() {
 
       return matchesSearch && matchesCategory;
     });
-  }, [products, searchQuery, selectedCategory]);
+
+    return [...filtered].sort((first, second) => {
+      switch (sortBy) {
+        case "oldest":
+          return (
+            new Date(first.created_at).getTime() -
+            new Date(second.created_at).getTime()
+          );
+
+        case "priceLow":
+          return (
+            Number(first.price) - Number(second.price)
+          );
+
+        case "priceHigh":
+          return (
+            Number(second.price) - Number(first.price)
+          );
+
+        case "stock":
+          return (
+            Number(second.stock) - Number(first.stock)
+          );
+
+        case "newest":
+        default:
+          return (
+            new Date(second.created_at).getTime() -
+            new Date(first.created_at).getTime()
+          );
+      }
+    });
+  }, [
+    products,
+    searchQuery,
+    selectedCategory,
+    sortBy,
+  ]);
 
   const statistics = useMemo(() => {
     const totalProducts = products.length;
@@ -198,7 +256,7 @@ export default function ProductsPage() {
     }).length;
 
     const outOfStock = products.filter(
-      (product) => Number(product.stock) === 0
+      (product) => Number(product.stock) <= 0
     ).length;
 
     return {
@@ -213,28 +271,28 @@ export default function ProductsPage() {
     {
       title: "Total Products",
       value: statistics.totalProducts,
-      subtitle: "All store products",
+      description: "All store products",
       icon: Boxes,
       iconClassName: "bg-blue-600",
     },
     {
       title: "In Stock",
       value: statistics.inStock,
-      subtitle: "More than 5 remaining",
+      description: "More than 5 remaining",
       icon: CheckCircle2,
       iconClassName: "bg-green-600",
     },
     {
       title: "Low Stock",
       value: statistics.lowStock,
-      subtitle: "1 to 5 remaining",
+      description: "1 to 5 remaining",
       icon: AlertTriangle,
       iconClassName: "bg-yellow-600",
     },
     {
       title: "Out of Stock",
       value: statistics.outOfStock,
-      subtitle: "Needs restocking",
+      description: "Needs restocking",
       icon: PackageX,
       iconClassName: "bg-red-600",
     },
@@ -242,7 +300,7 @@ export default function ProductsPage() {
 
   return (
     <main className="admin-page space-y-8 text-white">
-      <div className="flex flex-col items-start justify-between gap-5 md:flex-row md:items-center">
+      <header className="flex flex-col items-start justify-between gap-5 md:flex-row md:items-center">
         <div>
           <h1 className="text-4xl font-black text-white md:text-5xl">
             Products
@@ -269,7 +327,7 @@ export default function ProductsPage() {
         >
           + Add Product
         </Link>
-      </div>
+      </header>
 
       <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {statisticCards.map((card) => {
@@ -295,7 +353,7 @@ export default function ProductsPage() {
                   )}
 
                   <p className="mt-2 text-xs text-gray-500">
-                    {card.subtitle}
+                    {card.description}
                   </p>
                 </div>
 
@@ -303,8 +361,8 @@ export default function ProductsPage() {
                   className={`${card.iconClassName} rounded-2xl p-4`}
                 >
                   <Icon
-                    className="text-white"
                     size={26}
+                    className="text-white"
                   />
                 </div>
               </div>
@@ -314,11 +372,11 @@ export default function ProductsPage() {
       </section>
 
       <section className="rounded-3xl border border-white/10 bg-[#1E293B] p-5 shadow-xl">
-        <div className="flex flex-col gap-4 lg:flex-row">
+        <div className="flex flex-col gap-4 xl:flex-row">
           <div className="relative flex-1">
             <Search
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
               size={20}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
             />
 
             <input
@@ -337,7 +395,7 @@ export default function ProductsPage() {
             onChange={(event) =>
               setSelectedCategory(event.target.value)
             }
-            className="rounded-xl border border-white/10 bg-[#111827] px-4 py-3 text-white outline-none transition focus:border-red-500 lg:min-w-52"
+            className="rounded-xl border border-white/10 bg-[#111827] px-4 py-3 text-white outline-none transition focus:border-red-500 xl:min-w-52"
           >
             {categories.map((category) => (
               <option
@@ -349,6 +407,36 @@ export default function ProductsPage() {
                   : category}
               </option>
             ))}
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(event) =>
+              setSortBy(
+                event.target.value as SortOption
+              )
+            }
+            className="rounded-xl border border-white/10 bg-[#111827] px-4 py-3 text-white outline-none transition focus:border-red-500 xl:min-w-52"
+          >
+            <option value="newest">
+              Newest First
+            </option>
+
+            <option value="oldest">
+              Oldest First
+            </option>
+
+            <option value="priceLow">
+              Price: Low to High
+            </option>
+
+            <option value="priceHigh">
+              Price: High to Low
+            </option>
+
+            <option value="stock">
+              Highest Stock
+            </option>
           </select>
         </div>
 
@@ -370,10 +458,7 @@ export default function ProductsPage() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setLoading(true);
-                  void fetchProducts();
-                }}
+                onClick={() => void fetchProducts()}
                 className="mt-4 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-700"
               >
                 Try Again
@@ -393,7 +478,7 @@ export default function ProductsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[850px] text-white">
+            <table className="w-full min-w-[1050px] text-white">
               <thead className="bg-[#111827]">
                 <tr>
                   <th className="p-5 text-left font-bold text-gray-200">
@@ -414,6 +499,10 @@ export default function ProductsPage() {
 
                   <th className="p-5 text-left font-bold text-gray-200">
                     Stock
+                  </th>
+
+                  <th className="p-5 text-left font-bold text-gray-200">
+                    Created
                   </th>
 
                   <th className="p-5 text-center font-bold text-gray-200">
@@ -441,7 +530,7 @@ export default function ProductsPage() {
                             className="h-20 w-20 rounded-xl border border-white/10 object-cover"
                           />
                         ) : (
-                          <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-[#111827] text-sm text-gray-400">
+                          <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-[#111827] text-center text-xs text-gray-400">
                             No Image
                           </div>
                         )}
@@ -470,6 +559,10 @@ export default function ProductsPage() {
                         </span>
                       </td>
 
+                      <td className="p-5 text-gray-300">
+                        {formatDate(product.created_at)}
+                      </td>
+
                       <td className="p-5 text-center">
                         <div className="flex justify-center gap-2">
                           <Link
@@ -485,9 +578,7 @@ export default function ProductsPage() {
                               deletingId === product.id
                             }
                             onClick={() =>
-                              void deleteProduct(
-                                product.id
-                              )
+                              void deleteProduct(product)
                             }
                             className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                           >
@@ -504,7 +595,7 @@ export default function ProductsPage() {
                 {filteredProducts.length === 0 && (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="px-6 py-16 text-center"
                     >
                       <p className="font-semibold text-white">
@@ -512,8 +603,8 @@ export default function ProductsPage() {
                       </p>
 
                       <p className="mt-2 text-sm text-gray-400">
-                        Try changing your search or
-                        category filter.
+                        Try changing the search,
+                        category, or sorting option.
                       </p>
                     </td>
                   </tr>
