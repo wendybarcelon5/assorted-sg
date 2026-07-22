@@ -304,7 +304,7 @@ export default function AccountPage() {
           </Link>
 
           <Link
-            href="/settings"
+            href="/account/settings"
             className="rounded-2xl border border-white/10 bg-[#111827] p-6 hover:border-red-600 transition"
           >
             <Settings

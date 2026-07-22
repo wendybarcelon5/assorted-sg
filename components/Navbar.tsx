@@ -558,7 +558,7 @@ export default function Navbar() {
                         </Link>
 
                         <Link
-                          href="/settings"
+                          href="/account/settings"
                           className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition ${
                             isActiveRoute(
                               "/settings"
@@ -819,7 +819,7 @@ export default function Navbar() {
             </Link>
 
             <Link
-              href="/settings"
+              href="/account/settings"
               className={`flex items-center gap-3 border-b border-white/10 px-6 py-4 font-bold transition ${
                 isActiveRoute(
                   "/settings"
