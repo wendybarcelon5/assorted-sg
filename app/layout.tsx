@@ -1,38 +1,67 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import * as Cart from "./context/CartContext";
+import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+import Sidebar from "@/components/admin/Sidebar";
+import Header from "@/components/admin/Header";
+import { createClient } from "@/lib/supabase/server";
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "Assorted SG",
-  description: "Premium Streetwear",
-};
-
-export default function RootLayout({
+export default async function AdminLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: ReactNode;
+}) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect("/login?redirect=/admin");
+  }
+
+  const {
+    data: profile,
+    error: profileError,
+  } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    console.error(
+      "Admin profile lookup failed:",
+      profileError
+    );
+
+    redirect("/login?error=profile-access");
+  }
+
+  const normalizedRole =
+    typeof profile?.role === "string"
+      ? profile.role.trim().toLowerCase()
+      : "";
+
+  if (
+    normalizedRole !== "admin" &&
+    normalizedRole !== "administrator"
+  ) {
+    redirect("/");
+  }
+
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        <Cart.CartProvider>
+    <div className="min-h-screen bg-[#0B1120] text-white">
+      <Sidebar />
+
+      <div className="lg:ml-72">
+        <Header />
+
+        <main className="min-h-screen bg-[#0B1120] p-6 text-white md:p-8">
           {children}
-        </Cart.CartProvider>
-      </body>
-    </html>
+        </main>
+      </div>
+    </div>
   );
 }
