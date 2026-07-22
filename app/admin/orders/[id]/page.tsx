@@ -265,18 +265,47 @@ export default function OrderDetailsPage() {
             </div>
 
             <div>
+<p className="mb-2 text-sm text-gray-400">
+  Order Status
+</p>
 
-              <p className="mb-2 text-sm text-gray-400">
-                Order Status
-              </p>
+<div className="mb-4 flex flex-wrap gap-2">
 
-              <select
-                value={status}
-                onChange={(e) =>
-                  setStatus(e.target.value)
-                }
-                className="w-full rounded-xl bg-[#111827] px-4 py-3 text-white outline-none"
-              >
+  {[
+    "Pending",
+    "Awaiting Payment Verification",
+    "Preparing",
+    "Shipped",
+    "Out for Delivery",
+    "Delivered",
+    "Cancelled",
+  ].map((value) => (
+
+    <button
+      key={value}
+      type="button"
+      onClick={() => setStatus(value)}
+      className={`rounded-lg px-3 py-2 text-sm font-semibold transition
+        ${
+          status === value
+            ? "bg-red-600 text-white"
+            : "bg-[#111827] text-gray-300 hover:bg-[#1F2937]"
+        }`}
+    >
+      {value}
+    </button>
+
+  ))}
+
+</div>
+
+<select
+  value={status}
+  onChange={(e) =>
+    setStatus(e.target.value)
+  }
+  className="w-full rounded-xl bg-[#111827] px-4 py-3 text-white outline-none"
+>
                 <option>Pending</option>
 
                 <option>
