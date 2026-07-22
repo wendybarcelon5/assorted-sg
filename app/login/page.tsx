@@ -2,17 +2,29 @@
 
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import { useState } from "react";
+
+type ProfileRole = {
+  role: string | null;
+};
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [password, setPassword] =
+    useState("");
+  const [loading, setLoading] =
+    useState(false);
 
-  async function handleLogin(event: React.FormEvent) {
+  async function handleLogin(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
 
     if (loading) {
@@ -22,25 +34,81 @@ export default function LoginPage() {
     try {
       setLoading(true);
 
-      const { error } =
+      const {
+        data: loginData,
+        error: loginError,
+      } =
         await supabase.auth.signInWithPassword({
-          email,
+          email: email.trim(),
           password,
         });
 
-      if (error) {
-        alert(error.message);
+      if (loginError) {
+        alert(loginError.message);
         return;
       }
 
-      alert("Logged in successfully!");
+      if (!loginData.user) {
+        alert(
+          "Login succeeded, but the account could not be loaded."
+        );
+        return;
+      }
 
-      router.push("/");
+      const {
+        data: profileData,
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", loginData.user.id)
+        .maybeSingle<ProfileRole>();
+
+      if (profileError) {
+        console.error(
+          "Unable to load profile role:",
+          profileError
+        );
+      }
+
+      const role =
+        profileData?.role
+          ?.trim()
+          .toLowerCase() ?? "customer";
+
+      const requestedPath =
+        searchParams.get("redirect") ||
+        searchParams.get("redirectTo") ||
+        searchParams.get("next");
+
+      if (
+        role === "admin" ||
+        role === "administrator"
+      ) {
+        const adminDestination =
+          requestedPath?.startsWith("/admin")
+            ? requestedPath
+            : "/admin";
+
+        router.replace(adminDestination);
+        router.refresh();
+        return;
+      }
+
+      const customerDestination =
+        requestedPath &&
+        !requestedPath.startsWith("/admin")
+          ? requestedPath
+          : "/";
+
+      router.replace(customerDestination);
       router.refresh();
     } catch (error) {
       console.error("Login error:", error);
 
-      alert("Something went wrong while logging in.");
+      alert(
+        "Something went wrong while logging in."
+      );
     } finally {
       setLoading(false);
     }
@@ -56,11 +124,12 @@ export default function LoginPage() {
             </p>
 
             <h1 className="mt-3 text-3xl font-black">
-              Customer Login
+              Account Login
             </h1>
 
             <p className="mt-2 text-sm text-gray-400">
-              Log in to manage your orders and reviews.
+              Log in to access your Assorted
+              SG account.
             </p>
           </div>
 
@@ -103,7 +172,9 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(event) =>
-                  setPassword(event.target.value)
+                  setPassword(
+                    event.target.value
+                  )
                 }
                 placeholder="Enter your password"
                 required
@@ -117,7 +188,9 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full rounded-xl bg-red-600 px-5 py-4 font-black transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? "Logging in..." : "Log In"}
+              {loading
+                ? "Logging in..."
+                : "Log In"}
             </button>
           </form>
 
